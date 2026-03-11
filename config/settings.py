@@ -16,6 +16,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
+AUTH_USER_MODEL = "users.User"
 
 # Application definition
 INSTALLED_APPS = [
@@ -26,6 +27,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third party
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    # Local apps
+    "apps.users",
+    "apps.destinations",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +65,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
 
 # Database
 DATABASES = {"default": env.db("DATABASE_URL")}
@@ -83,7 +99,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "es-mx"
 TIME_ZONE = "America/Mexico_City"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 
