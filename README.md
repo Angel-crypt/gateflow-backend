@@ -149,7 +149,7 @@ ENV=prod   # PostgreSQL, DEBUG=False
 
 ```bash
 # Linter + formatter + type checking
-ruff check . --fix && black . && mypy .
+uv run ruff check . --fix && black . && uv run mypy .
 ```
 
 ---

@@ -109,6 +109,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/05/4c9c419b7051eb4b350100b086be6df487f968ab672d3d370f8ccf7c3746/django_stubs-5.2.9-py3-none-any.whl", hash = "sha256:2317a7130afdaa76f6ff7f623650d7f3bf1b6c86a60f95840e14e6ec6de1a7cd", size = 508656, upload-time = "2026-01-20T23:59:25.12Z" },
 ]
 
+[package.optional-dependencies]
+compatible-mypy = [
+    { name = "mypy" },
+]
+
 [[package]]
 name = "django-stubs-ext"
 version = "5.2.9"
@@ -241,7 +246,7 @@ dependencies = [
     { name = "django" },
     { name = "django-environ" },
     { name = "django-jazzmin" },
-    { name = "django-stubs" },
+    { name = "django-stubs", extra = ["compatible-mypy"] },
     { name = "mypy" },
     { name = "psycopg2-binary" },
     { name = "ruff" },
@@ -253,7 +258,7 @@ requires-dist = [
     { name = "django", specifier = ">=6.0.3" },
     { name = "django-environ", specifier = ">=0.13.0" },
     { name = "django-jazzmin", specifier = ">=3.0.3" },
-    { name = "django-stubs", specifier = ">=5.2.9" },
+    { name = "django-stubs", extras = ["compatible-mypy"], specifier = ">=5.2.9" },
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "ruff", specifier = ">=0.15.4" },
