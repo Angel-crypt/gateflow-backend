@@ -30,8 +30,8 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ## 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/Angel-crypt/GateFlow
-cd GateFlow
+git clone git@github.com:Angel-crypt/gateflow-backend.git
+cd gateflow-backend
 ```
 
 ---
