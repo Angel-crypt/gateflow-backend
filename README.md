@@ -52,9 +52,9 @@ El proyecto usa tres archivos `.env`. Encontrarás las plantillas en la carpeta 
 
 ```bash
 # Copia las plantillas
-cp "examples env/.env.example" .env
-cp "examples env/.env.dev.example" .env.dev
-cp "examples env/.env.prod.example" .env.prod
+cp "examples-dev/.env.example" .env
+cp "examples-dev/.env.dev.example" .env.dev
+cp "examples-dev/.env.prod.example" .env.prod
 ```
 
 ### `.env` — entorno activo
