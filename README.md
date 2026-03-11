@@ -14,11 +14,13 @@ Stack: **Python 3.13 · Django 6 · PostgreSQL/SQLite3 · Docker/Podman · uv**
 ### Instalar uv
 
 **Linux / macOS**
+
 ```bash
 curl -Ls https://astral.sh/uv/install.sh | sh
 ```
 
 **Windows (PowerShell)**
+
 ```powershell
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
@@ -28,8 +30,8 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ## 1. Clonar el repositorio
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd <NOMBRE_DEL_PROYECTO>
+git clone https://github.com/Angel-crypt/GateFlow
+cd GateFlow
 ```
 
 ---
@@ -163,3 +165,10 @@ ruff check . --fix && black . && mypy .
 | `uv run manage.py runserver` | Iniciar servidor |
 | `docker compose up -d` | Levantar PostgreSQL |
 | `docker compose down` | Detener contenedores |
+
+## License
+
+Proprietary – All Rights Reserved  
+Copyright (c) 2026 Angel Cruz and Diego Lara
+
+See the [LICENSE](LICENSE) file for details.
