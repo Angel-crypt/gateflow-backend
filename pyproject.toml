@@ -12,6 +12,7 @@ dependencies = [
     "django-stubs[compatible-mypy]>=5.2.9",
     "djangorestframework-simplejwt>=5.5.1",
     "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
     "psycopg2-binary>=2.9.11",
     "ruff>=0.15.4",
 ]
