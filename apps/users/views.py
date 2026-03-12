@@ -41,4 +41,4 @@ class ChangePasswordView(APIView):
         serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "Contraseña actualizada correctamente."})
+        return Response(status=status.HTTP_204_NO_CONTENT)
