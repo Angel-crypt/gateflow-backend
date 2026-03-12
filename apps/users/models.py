@@ -40,7 +40,6 @@ class User(AbstractUser):
     destinations = models.ManyToManyField(
         Destination,
         blank=True,
-        null=True,
         related_name="company_users",
     )
 
