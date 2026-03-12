@@ -1,0 +1,1072 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GateFlow API",
+    "description": "API REST para el Sistema de Gestión de Accesos para Parques Industriales.\n\n## Roles\n- `is_superuser` — Solo Django Admin. Crea parques y primeros admins.\n- `admin` — Gestiona su parque desde el frontend.\n- `guard` — Opera entradas y salidas desde el frontend.\n- `company` — Genera pases QR para sus destinos asignados.\n\n## Autenticación\nJWT Bearer token. Obtener en `POST /auth/login/`.\nEnviar en cada request: `Authorization: Bearer <access_token>`",
+    "version": "2.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:8000/api/v1", "description": "Desarrollo local" },
+    { "url": "https://api.gateflow.com/api/v1", "description": "Producción" }
+  ],
+  "tags": [
+    { "name": "Auth",         "description": "Autenticación y sesión — todos los roles" },
+    { "name": "Users",        "description": "Gestión de usuarios — admin del parque" },
+    { "name": "Destinations", "description": "Destinos y parque — admin escribe, otros leen" },
+    { "name": "VisitReasons", "description": "Catálogo de motivos — admin escribe, otros leen" },
+    { "name": "Passes",       "description": "Pases QR — company genera, guard valida" },
+    { "name": "AccessLogs",   "description": "Registro de accesos — guard opera, admin consulta" },
+    { "name": "Metrics",      "description": "Métricas operativas — solo admin" }
+  ],
+  "paths": {
+
+    "/auth/login/": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Iniciar sesión",
+        "description": "Retorna access token, refresh token y datos del usuario autenticado.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" },
+              "example": { "email": "admin@parque.com", "password": "secret123" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+
+    "/auth/refresh/": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Renovar access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refresh"],
+                "properties": { "refresh": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token renovado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "access": { "type": "string" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+
+    "/auth/logout/": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Cerrar sesión",
+        "description": "Invalida el refresh token.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refresh"],
+                "properties": { "refresh": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Sesión cerrada" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+
+    "/auth/me/": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Perfil del usuario autenticado",
+        "description": "Incluye destinos asignados si el rol es company.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Datos del usuario",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+
+    "/auth/change-password/": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Cambiar contraseña",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChangePasswordRequest" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Contraseña actualizada" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+
+    "/users/": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Listar usuarios del parque",
+        "description": "Solo admin. Retorna usuarios de su propio parque. No incluye superusuarios.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" },
+          {
+            "name": "role", "in": "query",
+            "schema": { "type": "string", "enum": ["admin", "guard", "company"] }
+          },
+          { "name": "is_active", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de usuarios",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedUsers" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Crear usuario",
+        "description": "Solo admin. Roles permitidos: guard y company. El parque se asigna automáticamente al parque del admin. Si role es company, destinations es obligatorio y deben pertenecer al parque del admin.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserCreateRequest" },
+              "examples": {
+                "crear_guardia": {
+                  "summary": "Crear guardia",
+                  "value": { "email": "guardia01@parque.com", "password": "temp1234", "role": "guard" }
+                },
+                "crear_empresa": {
+                  "summary": "Crear empresa con destinos",
+                  "value": { "email": "empresa@abc.com", "password": "temp1234", "role": "company", "destinations": [3, 7] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/users/{id}/": {
+      "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+      "get": {
+        "tags": ["Users"],
+        "summary": "Obtener usuario por ID",
+        "description": "Solo admin. Solo puede ver usuarios de su propio parque.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Datos del usuario",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Actualizar usuario",
+        "description": "Solo admin. Si el usuario es company, puede actualizar sus destinos asignados. Los destinos deben pertenecer al parque del admin.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserUpdateRequest" },
+              "example": { "is_active": false, "destinations": [3, 7, 9] }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/User" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Desactivar usuario",
+        "description": "Solo admin. Marca is_active=false. No elimina el registro.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "204": { "description": "Usuario desactivado" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/destinations/": {
+      "get": {
+        "tags": ["Destinations"],
+        "summary": "Listar destinos",
+        "description": "Todos los roles. Filtra automáticamente por el parque del usuario. Admin ve activos e inactivos. Guard y company ven solo activos.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["company", "area"] } },
+          { "name": "is_active", "in": "query", "description": "Solo disponible para admin", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de destinos",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedDestinations" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Destinations"],
+        "summary": "Crear destino",
+        "description": "Solo admin. Se asocia automáticamente al parque del admin.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DestinationCreateRequest" },
+              "example": { "name": "Empresa ABC S.A.", "type": "company", "contact_info": "contacto@abc.com" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Destino creado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Destination" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/destinations/{id}/": {
+      "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+      "get": {
+        "tags": ["Destinations"],
+        "summary": "Obtener destino por ID",
+        "description": "Todos los roles. Company solo puede ver sus destinos asignados.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Datos del destino",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Destination" } }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Destinations"],
+        "summary": "Actualizar destino",
+        "description": "Solo admin.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DestinationUpdateRequest" },
+              "example": { "is_active": false }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Destino actualizado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Destination" } }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/visit-reasons/": {
+      "get": {
+        "tags": ["VisitReasons"],
+        "summary": "Listar motivos de visita",
+        "description": "Todos los roles. Filtra por parque del usuario. Admin ve activos e inactivos, otros solo activos.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "is_active", "in": "query", "description": "Solo admin", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de motivos",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/VisitReason" } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["VisitReasons"],
+        "summary": "Crear motivo de visita",
+        "description": "Solo admin. Se asocia automáticamente al parque del admin.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VisitReasonRequest" },
+              "example": { "name": "Visita comercial" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Motivo creado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/VisitReason" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/visit-reasons/{id}/": {
+      "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+      "patch": {
+        "tags": ["VisitReasons"],
+        "summary": "Actualizar motivo de visita",
+        "description": "Solo admin.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VisitReasonRequest" },
+              "example": { "is_active": false }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Motivo actualizado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/VisitReason" } }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/passes/": {
+      "get": {
+        "tags": ["Passes"],
+        "summary": "Listar pases",
+        "description": "Company ve solo sus propios pases. Admin ve todos los del parque.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" },
+          { "name": "pass_type", "in": "query", "schema": { "type": "string", "enum": ["single_use", "day_pass"] } },
+          {
+            "name": "status", "in": "query",
+            "description": "active = vigente | used = consumido | expired = fuera de fecha",
+            "schema": { "type": "string", "enum": ["active", "used", "expired"] }
+          },
+          { "name": "destination_id", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de pases",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedPasses" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Passes"],
+        "summary": "Generar pase QR",
+        "description": "Solo company. destination_id debe ser uno de los destinos asignados al usuario. El servidor genera qr_code automáticamente.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PassCreateRequest" },
+              "examples": {
+                "single_use": {
+                  "summary": "Uso único",
+                  "value": { "visitor_name": "Juan Pérez", "plate": "ABC-1234", "destination_id": 3, "reason_id": 1, "pass_type": "single_use", "valid_from": "2025-06-01", "valid_until": "2025-06-01" }
+                },
+                "day_pass": {
+                  "summary": "Pase día",
+                  "value": { "visitor_name": "María López", "plate": "XYZ-9876", "destination_id": 3, "reason_id": 2, "pass_type": "day_pass", "valid_from": "2025-06-01", "valid_until": "2025-06-30" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pase generado con qr_code incluido",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Pass" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/passes/{id}/": {
+      "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+      "get": {
+        "tags": ["Passes"],
+        "summary": "Obtener pase por ID",
+        "description": "Company solo puede ver sus propios pases.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Datos del pase",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Pass" } }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/passes/validate/": {
+      "post": {
+        "tags": ["Passes"],
+        "summary": "Validar y consumir pase QR",
+        "description": "Solo guard. Verifica existencia, vigencia y consumo del pase. Si válido: crea AccessLog con entry_time=ahora y access_type=qr. Si single_use: marca is_used=true.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["qr_code"],
+                "properties": {
+                  "qr_code": { "type": "string", "description": "Contenido del QR escaneado" }
+                }
+              },
+              "example": { "qr_code": "GATEFLOW-a3f8c2d1-9b4e-4f2a" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pase válido — acceso registrado",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ValidatePassResponse" } }
+            }
+          },
+          "400": {
+            "description": "Pase inválido",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "already_used": { "value": { "detail": "Este pase ya fue utilizado.", "code": "pass_already_used" } },
+                  "expired":      { "value": { "detail": "Este pase ha expirado.", "code": "pass_expired" } },
+                  "not_found":    { "value": { "detail": "QR no reconocido.", "code": "pass_not_found" } }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/access-logs/": {
+      "get": {
+        "tags": ["AccessLogs"],
+        "summary": "Listar registros de acceso",
+        "description": "Admin ve historial completo con filtros. Guard usa ?open=true para ver accesos sin salida.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" },
+          { "name": "open", "in": "query", "description": "true = solo accesos sin exit_time", "schema": { "type": "boolean" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to",   "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "destination_id", "in": "query", "schema": { "type": "integer" } },
+          { "name": "access_type", "in": "query", "schema": { "type": "string", "enum": ["manual", "qr"] } },
+          { "name": "search", "in": "query", "description": "Búsqueda por nombre o placa", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de accesos",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedAccessLogs" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["AccessLogs"],
+        "summary": "Registrar entrada manual",
+        "description": "Solo guard. entry_time se asigna automáticamente. access_type se fija como manual.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AccessLogCreateRequest" },
+              "example": { "visitor_name": "Carlos Ruiz", "plate": "DEF-5678", "destination_id": 3, "reason_id": 1 }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entrada registrada",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AccessLog" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/access-logs/{id}/exit/": {
+      "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+      "patch": {
+        "tags": ["AccessLogs"],
+        "summary": "Registrar salida",
+        "description": "Solo guard. exit_time se asigna automáticamente. Falla si el acceso ya tiene exit_time.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Salida registrada",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AccessLog" } }
+            }
+          },
+          "400": {
+            "description": "Acceso ya cerrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "detail": "Este acceso ya tiene una salida registrada.", "code": "already_closed" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+
+    "/metrics/summary/": {
+      "get": {
+        "tags": ["Metrics"],
+        "summary": "Resumen del dashboard",
+        "description": "Solo admin. Accesos hoy, esta semana, visitantes activos ahora y ratio QR vs manual.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Métricas resumidas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MetricsSummary" },
+                "example": { "accesses_today": 34, "accesses_this_week": 187, "currently_inside": 8, "qr_ratio": 0.62 }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/metrics/by-day/": {
+      "get": {
+        "tags": ["Metrics"],
+        "summary": "Accesos por día",
+        "description": "Solo admin. Datos para gráfica de barras.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "date_from", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to",   "in": "query", "required": true, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Serie por día",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/DayMetric" } },
+                "example": [{ "date": "2025-05-26", "count": 21 }, { "date": "2025-05-27", "count": 35 }]
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/metrics/by-hour/": {
+      "get": {
+        "tags": ["Metrics"],
+        "summary": "Accesos por hora del día",
+        "description": "Solo admin.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to",   "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accesos por franja horaria (0–23)",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/HourMetric" } },
+                "example": [{ "hour": 7, "count": 5 }, { "hour": 8, "count": 22 }]
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+
+    "/metrics/top-destinations/": {
+      "get": {
+        "tags": ["Metrics"],
+        "summary": "Destinos más visitados",
+        "description": "Solo admin.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "limit",     "in": "query", "schema": { "type": "integer", "default": 5 } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to",   "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranking de destinos",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/DestinationMetric" } },
+                "example": [{ "destination_id": 3, "name": "Empresa ABC S.A.", "count": 74 }]
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    }
+
+  },
+
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Authorization: Bearer <access_token>"
+      }
+    },
+
+    "parameters": {
+      "IdPath":       { "name": "id",        "in": "path",  "required": true, "schema": { "type": "integer" } },
+      "PageParam":    { "name": "page",      "in": "query", "schema": { "type": "integer", "default": 1 } },
+      "PageSizeParam":{ "name": "page_size", "in": "query", "schema": { "type": "integer", "default": 20 } }
+    },
+
+    "responses": {
+      "Unauthorized": {
+        "description": "Token ausente o inválido",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "detail": "Las credenciales de autenticación no se proveyeron." } } }
+      },
+      "Forbidden": {
+        "description": "El rol no tiene permiso para esta operación",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "detail": "No tienes permiso para realizar esta acción." } } }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "detail": "No encontrado." } } }
+      },
+      "BadRequest": {
+        "description": "Datos inválidos",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" } } }
+      }
+    },
+
+    "schemas": {
+
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "detail": { "type": "string" },
+          "code":   { "type": "string" }
+        }
+      },
+
+      "ValidationErrorResponse": {
+        "type": "object",
+        "additionalProperties": { "type": "array", "items": { "type": "string" } },
+        "example": { "visitor_name": ["Este campo es requerido."], "plate": ["Máximo 20 caracteres."] }
+      },
+
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "count":    { "type": "integer" },
+          "next":     { "type": "string", "nullable": true },
+          "previous": { "type": "string", "nullable": true }
+        }
+      },
+
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email":    { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": ["current_password", "new_password", "confirm_password"],
+        "properties": {
+          "current_password":  { "type": "string" },
+          "new_password":      { "type": "string", "minLength": 8 },
+          "confirm_password":  { "type": "string", "minLength": 8 }
+        }
+      },
+
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "access":  { "type": "string" },
+          "refresh": { "type": "string" },
+          "user":    { "$ref": "#/components/schemas/User" }
+        }
+      },
+
+      "IndustrialPark": {
+        "type": "object",
+        "properties": {
+          "id":   { "type": "integer" },
+          "name": { "type": "string" }
+        }
+      },
+
+      "DestinationSummary": {
+        "type": "object",
+        "description": "Versión resumida para embeber en User, Pass y AccessLog",
+        "properties": {
+          "id":   { "type": "integer" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["company", "area"] }
+        }
+      },
+
+      "User": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "integer" },
+          "email":        { "type": "string", "format": "email" },
+          "role":         { "type": "string", "enum": ["admin", "guard", "company"] },
+          "is_active":    { "type": "boolean" },
+          "park":         { "$ref": "#/components/schemas/IndustrialPark" },
+          "destinations": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DestinationSummary" },
+            "description": "Solo presente si role = company"
+          }
+        }
+      },
+
+      "UserCreateRequest": {
+        "type": "object",
+        "required": ["email", "password", "role"],
+        "properties": {
+          "email":        { "type": "string", "format": "email" },
+          "password":     { "type": "string", "minLength": 8 },
+          "role":         { "type": "string", "enum": ["guard", "company"] },
+          "destinations": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "IDs de destinos. Obligatorio si role=company. Deben pertenecer al parque del admin."
+          }
+        }
+      },
+
+      "UserUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "is_active":    { "type": "boolean" },
+          "destinations": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Solo aplica si el usuario es company"
+          }
+        }
+      },
+
+      "PaginatedUsers": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedResponse" },
+          { "type": "object", "properties": { "results": { "type": "array", "items": { "$ref": "#/components/schemas/User" } } } }
+        ]
+      },
+
+      "Destination": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "integer" },
+          "name":         { "type": "string" },
+          "type":         { "type": "string", "enum": ["company", "area"] },
+          "contact_info": { "type": "string", "nullable": true },
+          "is_active":    { "type": "boolean" },
+          "park":         { "$ref": "#/components/schemas/IndustrialPark" }
+        }
+      },
+
+      "DestinationCreateRequest": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name":         { "type": "string", "maxLength": 100 },
+          "type":         { "type": "string", "enum": ["company", "area"] },
+          "contact_info": { "type": "string" }
+        }
+      },
+
+      "DestinationUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name":         { "type": "string", "maxLength": 100 },
+          "type":         { "type": "string", "enum": ["company", "area"] },
+          "contact_info": { "type": "string" },
+          "is_active":    { "type": "boolean" }
+        }
+      },
+
+      "PaginatedDestinations": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedResponse" },
+          { "type": "object", "properties": { "results": { "type": "array", "items": { "$ref": "#/components/schemas/Destination" } } } }
+        ]
+      },
+
+      "VisitReason": {
+        "type": "object",
+        "properties": {
+          "id":        { "type": "integer" },
+          "name":      { "type": "string" },
+          "is_active": { "type": "boolean" }
+        }
+      },
+
+      "VisitReasonRequest": {
+        "type": "object",
+        "properties": {
+          "name":      { "type": "string", "maxLength": 80 },
+          "is_active": { "type": "boolean" }
+        }
+      },
+
+      "Pass": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "integer" },
+          "visitor_name": { "type": "string" },
+          "plate":        { "type": "string" },
+          "destination":  { "$ref": "#/components/schemas/DestinationSummary" },
+          "reason":       { "$ref": "#/components/schemas/VisitReason" },
+          "pass_type":    { "type": "string", "enum": ["single_use", "day_pass"] },
+          "valid_from":   { "type": "string", "format": "date" },
+          "valid_until":  { "type": "string", "format": "date" },
+          "qr_code":      { "type": "string" },
+          "is_used":      { "type": "boolean" },
+          "created_at":   { "type": "string", "format": "date-time" }
+        }
+      },
+
+      "PassCreateRequest": {
+        "type": "object",
+        "required": ["visitor_name", "plate", "destination_id", "reason_id", "pass_type", "valid_from", "valid_until"],
+        "properties": {
+          "visitor_name":   { "type": "string", "maxLength": 100 },
+          "plate":          { "type": "string", "maxLength": 20 },
+          "destination_id": { "type": "integer", "description": "Debe ser uno de los destinos asignados al usuario company" },
+          "reason_id":      { "type": "integer" },
+          "pass_type":      { "type": "string", "enum": ["single_use", "day_pass"] },
+          "valid_from":     { "type": "string", "format": "date" },
+          "valid_until":    { "type": "string", "format": "date" }
+        }
+      },
+
+      "PaginatedPasses": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedResponse" },
+          { "type": "object", "properties": { "results": { "type": "array", "items": { "$ref": "#/components/schemas/Pass" } } } }
+        ]
+      },
+
+      "ValidatePassResponse": {
+        "type": "object",
+        "properties": {
+          "access_log": { "$ref": "#/components/schemas/AccessLog" },
+          "pass":       { "$ref": "#/components/schemas/Pass" }
+        }
+      },
+
+      "AccessLog": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "integer" },
+          "visitor_name": { "type": "string" },
+          "plate":        { "type": "string" },
+          "destination":  { "$ref": "#/components/schemas/DestinationSummary" },
+          "reason":       { "$ref": "#/components/schemas/VisitReason" },
+          "pass_id":      { "type": "integer", "nullable": true },
+          "entry_time":   { "type": "string", "format": "date-time" },
+          "exit_time":    { "type": "string", "format": "date-time", "nullable": true },
+          "access_type":  { "type": "string", "enum": ["manual", "qr"] }
+        }
+      },
+
+      "AccessLogCreateRequest": {
+        "type": "object",
+        "required": ["visitor_name", "plate", "destination_id", "reason_id"],
+        "properties": {
+          "visitor_name":   { "type": "string", "maxLength": 100 },
+          "plate":          { "type": "string", "maxLength": 20 },
+          "destination_id": { "type": "integer" },
+          "reason_id":      { "type": "integer" }
+        }
+      },
+
+      "PaginatedAccessLogs": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PaginatedResponse" },
+          { "type": "object", "properties": { "results": { "type": "array", "items": { "$ref": "#/components/schemas/AccessLog" } } } }
+        ]
+      },
+
+      "MetricsSummary": {
+        "type": "object",
+        "properties": {
+          "accesses_today":     { "type": "integer" },
+          "accesses_this_week": { "type": "integer" },
+          "currently_inside":   { "type": "integer" },
+          "qr_ratio":           { "type": "number", "format": "float", "minimum": 0, "maximum": 1 }
+        }
+      },
+
+      "DayMetric": {
+        "type": "object",
+        "properties": {
+          "date":  { "type": "string", "format": "date" },
+          "count": { "type": "integer" }
+        }
+      },
+
+      "HourMetric": {
+        "type": "object",
+        "properties": {
+          "hour":  { "type": "integer", "minimum": 0, "maximum": 23 },
+          "count": { "type": "integer" }
+        }
+      },
+
+      "DestinationMetric": {
+        "type": "object",
+        "properties": {
+          "destination_id": { "type": "integer" },
+          "name":           { "type": "string" },
+          "count":          { "type": "integer" }
+        }
+      }
+    }
+  }
+}
