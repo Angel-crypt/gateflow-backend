@@ -168,7 +168,7 @@ uv run ruff check . --fix && black . && uv run mypy .
 
 ## License
 
-Proprietary – All Rights Reserved  
+Proprietary – All Rights Reserved
 Copyright (c) 2026 Angel Cruz and Diego Lara
 
 See the [LICENSE](LICENSE) file for details.
