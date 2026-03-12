@@ -149,7 +149,25 @@ ENV=prod   # PostgreSQL, DEBUG=False
 
 ```bash
 # Linter + formatter + type checking
-uv run ruff check . --fix && black . && uv run mypy .
+uv run ruff check . --fix && black . && uv run python -m mypy .
+```
+
+---
+
+## Tests
+
+```bash
+# Todos los tests
+uv run pytest
+
+# Tests de una app específica
+uv run pytest apps/users/
+
+# Un test por nombre
+uv run pytest -k "test_create_guard"
+
+# Con output detallado
+uv run pytest -v
 ```
 
 ---
@@ -163,6 +181,7 @@ uv run ruff check . --fix && black . && uv run mypy .
 | `uv run manage.py migrate` | Aplicar migraciones |
 | `uv run manage.py createsuperuser` | Crear superusuario |
 | `uv run manage.py runserver` | Iniciar servidor |
+| `uv run pytest` | Correr tests |
 | `docker compose up -d` | Levantar PostgreSQL |
 | `docker compose down` | Detener contenedores |
 
