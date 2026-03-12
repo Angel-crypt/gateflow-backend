@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
-from apps.destinations.models import IndustrialPark
+from apps.destinations.models import Destination, IndustrialPark
 
 
 class UserManager(BaseUserManager):
@@ -36,6 +36,12 @@ class User(AbstractUser):
         null=True,
         blank=True,
         related_name="users",
+    )
+    destinations = models.ManyToManyField(
+        Destination,
+        blank=True,
+        null=True,
+        related_name="company_users",
     )
 
     USERNAME_FIELD = "email"
