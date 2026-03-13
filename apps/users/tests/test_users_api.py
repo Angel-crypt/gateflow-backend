@@ -23,11 +23,6 @@ def destination(park):
 
 
 @pytest.fixture
-def other_destination(other_park):
-    return Destination.objects.create(name="Empresa XYZ", type="company", park=other_park)
-
-
-@pytest.fixture
 def admin(park):
     return User.objects.create_user(email="admin@park.com", password="pass1234", role="admin", park=park)
 
@@ -38,11 +33,8 @@ def guard(park):
 
 
 @pytest.fixture
-def tenant(park, destination):
-    user = User.objects.create_user(email="tenant@park.com", password="pass1234", role="tenant", park=park)
-    destination.responsible = user
-    destination.save()
-    return user
+def tenant(park):
+    return User.objects.create_user(email="tenant@park.com", password="pass1234", role="tenant", park=park)
 
 
 @pytest.fixture
@@ -136,7 +128,15 @@ def test_create_guard_park_assigned_automatically(admin):
 
 
 @pytest.mark.django_db
-def test_create_tenant_with_destinations_returns_201(admin, destination):
+def test_create_tenant_returns_201(admin):
+    payload = {"email": "new_tenant@park.com", "password": "pass1234", "role": "tenant"}
+    response = auth_client(admin).post(URL, payload)
+    assert response.status_code == 201
+    assert response.data["role"] == "tenant"
+
+
+@pytest.mark.django_db
+def test_create_tenant_destinations_ignored_if_sent(admin, destination):
     payload = {
         "email": "new_tenant@park.com",
         "password": "pass1234",
@@ -145,26 +145,7 @@ def test_create_tenant_with_destinations_returns_201(admin, destination):
     }
     response = auth_client(admin).post(URL, payload)
     assert response.status_code == 201
-    assert len(response.data["destinations"]) == 1
-
-
-@pytest.mark.django_db
-def test_create_tenant_without_destinations_returns_400(admin):
-    payload = {"email": "new_tenant@park.com", "password": "pass1234", "role": "tenant"}
-    response = auth_client(admin).post(URL, payload)
-    assert response.status_code == 400
-
-
-@pytest.mark.django_db
-def test_create_tenant_with_destination_from_other_park_returns_400(admin, other_destination):
-    payload = {
-        "email": "new_tenant@park.com",
-        "password": "pass1234",
-        "role": "tenant",
-        "destinations": [other_destination.id],
-    }
-    response = auth_client(admin).post(URL, payload)
-    assert response.status_code == 400
+    assert response.data["destinations"] == []
 
 
 @pytest.mark.django_db
