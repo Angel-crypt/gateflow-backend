@@ -181,9 +181,10 @@ Crea un usuario `guard` o `tenant` en el parque del admin. Solo `admin`.
   "password": "temp1234",
   "first_name": "Carlos",
   "last_name": "López",
-  "role": "tenant",
-  "destinations": [3, 7]
+  "role": "tenant"
 }
 ```
 
 **Response `201`** — mismo schema que `GET /auth/me/`.
+
+> Los destinos se asignan desde `PATCH /api/destinations/{id}/` con `{ "responsible": user_id }`, no al crear el usuario.

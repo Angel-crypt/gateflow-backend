@@ -135,7 +135,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\",\n  \"first_name\": \"Carlos\",\n  \"last_name\": \"López\",\n  \"role\": \"tenant\",\n  \"destinations\": [1]\n}"
+              "raw": "{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\",\n  \"first_name\": \"Carlos\",\n  \"last_name\": \"López\",\n  \"role\": \"tenant\"\n}"
             }
           }
         }
