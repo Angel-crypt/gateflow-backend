@@ -1,6 +1,6 @@
 # GateFlow — Arquitectura del Backend
 
-Sistema de gestión de accesos para parques industriales. Empresas generan pases QR; guardias los validan en la entrada; admins monitorean métricas.
+Sistema de gestión de accesos para parques industriales. Inquilinos generan pases QR; guardias los validan en la entrada; admins monitorean métricas.
 
 **Stack:** Python 3.13 · Django 6 · PostgreSQL (prod) / SQLite3 (dev) · DRF + SimpleJWT · uv
 
@@ -13,7 +13,7 @@ Sistema de gestión de accesos para parques industriales. Empresas generan pases
 | `is_superuser` | Django shell / createsuperuser | Crea parques industriales y primeros admins vía Django Admin |
 | `admin` | superuser | Gestiona su parque: users, destinations |
 | `guard` | admin | Registra entradas/salidas, valida QR en la puerta |
-| `company` | admin | Genera pases QR para sus destinos asignados |
+| `tenant` | admin | Genera pases QR para sus destinos asignados |
 
 ---
 
@@ -35,16 +35,16 @@ Cuatro apps por dominio — el rol define permisos, no estructura de datos.
 ```
 Admin crea Destination en su parque
          ↓
-Admin crea User(company) y asigna Destination[]  ←── M2M
-         ↓
-Company elige uno de sus Destination y genera AccessPass
+Admin crea User(tenant) y asigna Destination[]
+         ↓  (destination.responsible = user)
+Tenant elige uno de sus Destination y genera AccessPass
          ↓
 AccessPass.destination_id = Destination específico (FK)
          ↓
 Guard escanea QR → valida AccessPass → crea AccessLog
 ```
 
-**Punto clave:** `AccessPass` tiene FK directa a `Destination`, no al `User`. El M2M `User.destinations` solo define qué destinos puede usar la empresa al generar un pase.
+**Punto clave:** cada `Destination` tiene un único `responsible` (FK a `User`). `user.destinations.all()` devuelve todos los destinos donde ese usuario es responsable.
 
 ---
 
@@ -52,20 +52,22 @@ Guard escanea QR → valida AccessPass → crea AccessLog
 
 ### `User` — diseño del modelo
 
-- `USERNAME_FIELD = "email"` — login por email, username se autogenera
+- `USERNAME_FIELD = "email"` — login por email
 - `email` con `unique=True` (Django no lo hace por defecto en `AbstractUser`)
-- FK a `IndustrialPark` con string lazy `"destinations.IndustrialPark"` para evitar imports circulares
+- FK a `IndustrialPark` para saber a qué parque pertenece el usuario
 - `UserManager` propio elimina la dependencia de `username` en `create_superuser`
-- `CustomUserAdmin` redefine `fieldsets` completo (no concatena con `UserAdmin.fieldsets`) porque mypy no puede garantizar que no sea `None`
+- `CustomUserAdmin` redefine `fieldsets` completo porque mypy no puede garantizar que `UserAdmin.fieldsets` no sea `None`
 
-### Estructura de repositorios
+### `Destination.responsible` — FK en lugar de M2M
 
-- Dos repos separados: `gateflow-backend` y `gateflow-frontend`
-- Frontend: un solo proyecto con separación en `/pages/admin`, `/pages/guard`, `/pages/company`
+- Cada destino tiene **un único responsable** (`ForeignKey(User, SET_NULL)`)
+- Un usuario puede ser responsable de **varios destinos** (relación inversa `user.destinations.all()`)
+- Se descartó `ManyToManyField` en `User` porque permitía múltiples responsables por destino, lo cual no corresponde al modelo de negocio
 
 ### Migraciones
 
-- `AUTH_USER_MODEL` debe declararse **antes** de la primera migración. Si no, las migraciones de `admin` apuntan al modelo equivocado y la base queda inconsistente.
+- `AUTH_USER_MODEL` debe declararse **antes** de la primera migración.
+- La dependencia circular entre `users` y `destinations` (User→IndustrialPark, Destination→User) obliga a Django a generar dos migraciones en `destinations`: una para crear los modelos y otra para agregar el FK a `User`.
 
 ### mypy
 
@@ -86,8 +88,8 @@ Guard escanea QR → valida AccessPass → crea AccessLog
 | Users | GET/PATCH | `/users/{id}/` | admin |
 | Destinations | GET/POST | `/destinations/` | admin (W), otros (R) |
 | Destinations | GET/PATCH | `/destinations/{id}/` | admin (W), otros (R) |
-| Passes | GET/POST | `/passes/` | company (W), admin (R) |
-| Passes | GET | `/passes/{id}/` | company (propio), admin |
+| Passes | GET/POST | `/passes/` | tenant (W), admin (R) |
+| Passes | GET | `/passes/{id}/` | tenant (propio), admin |
 | Passes | POST | `/passes/validate/` | guard |
 | AccessLogs | GET/POST | `/access-logs/` | guard (W), admin (R) |
 | AccessLogs | POST | `/access-logs/{id}/exit/` | guard |
@@ -107,8 +109,8 @@ Guard escanea QR → valida AccessPass → crea AccessLog
 ```
 IndustrialPark (1) ──< Destination (M)
 IndustrialPark (1) ──< User (M)
-User (M) >──< Destination (M)  [via users_user_destinations]
-User(company) (1) ──< AccessPass (M)
+User (1) ──< Destination (M)   [responsible — un destino, un responsable]
+User(tenant) (1) ──< AccessPass (M)
 Destination (1) ──< AccessPass (M)   ← FK directa, no a User
 AccessPass (1) ──< AccessLog (M)     ← null si entrada manual
 Destination (1) ──< AccessLog (M)    ← desnormalizado
@@ -122,8 +124,8 @@ User(guard) (1) ──< AccessLog (M)
 | Modelo | Estado |
 |---|---|
 | `IndustrialPark` | Implementado |
-| `User` | Implementado (⚠️ campo `destinations` M2M pendiente de migrar — requiere crear `Destination` primero) |
-| `Destination` | Pendiente |
+| `User` | Implementado |
+| `Destination` | Implementado |
 | `AccessPass` | Pendiente |
 | `AccessLog` | Pendiente |
 
@@ -134,5 +136,5 @@ User(guard) (1) ──< AccessLog (M)
 | `POST /auth/logout/` | Implementado |
 | `GET /auth/me/` | Implementado |
 | `POST /auth/change-password/` | Implementado |
-| `GET/POST /users/` | Pendiente |
+| `GET/POST /users/` | Implementado |
 | Resto | Pendiente |
