@@ -4,16 +4,19 @@ Autenticación JWT, roles y gestión de usuarios del parque.
 
 ## Modelo `User`
 
-Extiende `AbstractUser`. Login por email, username se autogenera.
+Extiende `AbstractUser`. Login por email.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
 | `email` | EmailField (unique) | Login principal, reemplaza a `username` |
-| `username` | CharField | Autogenerado, no se usa para login |
-| `role` | CharField | `admin` / `guard` / `company` |
+| `username` | CharField | Sin uso en login |
+| `first_name` | CharField | Nombre |
+| `last_name` | CharField | Apellido |
+| `role` | CharField | `admin` / `guard` / `tenant` |
 | `park` | FK → IndustrialPark | Parque al que pertenece (SET_NULL) |
-| `destinations` | M2M → Destination | Solo relevante para `company` |
 | `is_active` | BooleanField | Activo/inactivo, no se borran usuarios |
+
+> Los destinos del usuario se obtienen vía relación inversa: `user.destinations.all()` — son los `Destination` donde `responsible = user`.
 
 ## Roles
 
@@ -21,7 +24,7 @@ Extiende `AbstractUser`. Login por email, username se autogenera.
 |---|---|---|
 | `admin` | superuser (Django Admin) | Gestiona su parque completo |
 | `guard` | admin | Registra entradas/salidas, valida QR |
-| `company` | admin | Genera pases QR para sus destinos |
+| `tenant` | admin | Genera pases QR para sus destinos asignados |
 
 ## Endpoints
 
@@ -40,6 +43,8 @@ Extiende `AbstractUser`. Login por email, username se autogenera.
   "user": {
     "id": 1,
     "email": "admin@parque.com",
+    "first_name": "Ana",
+    "last_name": "García",
     "role": "admin",
     "is_active": true,
     "park": { "id": 1, "name": "Parque Norte" },
@@ -79,14 +84,16 @@ Invalida el `refresh` token. Requiere autenticación.
 
 ### `GET /auth/me/`
 
-Perfil del usuario autenticado. Si `role=company`, incluye `destinations`.
+Perfil del usuario autenticado. Si `role=tenant`, incluye `destinations`.
 
 **Response `200`**
 ```json
 {
   "id": 2,
-  "email": "empresa@abc.com",
-  "role": "company",
+  "email": "inquilino@abc.com",
+  "first_name": "Carlos",
+  "last_name": "López",
+  "role": "tenant",
   "is_active": true,
   "park": { "id": 1, "name": "Parque Norte" },
   "destinations": [
@@ -120,7 +127,7 @@ Lista usuarios del parque del admin autenticado. Excluye superusuarios. Solo `ad
 
 | Param | Tipo | Descripción |
 |---|---|---|
-| `role` | string | Filtrar por `admin`, `guard` o `company` |
+| `role` | string | Filtrar por `admin`, `guard` o `tenant` |
 | `is_active` | boolean | Filtrar por estado activo |
 | `page` | integer | Número de página (default: 1) |
 | `page_size` | integer | Tamaño de página (default: 20) |
@@ -134,7 +141,9 @@ Lista usuarios del parque del admin autenticado. Excluye superusuarios. Solo `ad
   "results": [
     {
       "id": 2,
-      "email": "guard@parque.com",
+      "email": "guardia01@parque.com",
+      "first_name": "Luis",
+      "last_name": "Martínez",
       "role": "guard",
       "is_active": true,
       "park": { "id": 1, "name": "Parque Norte" },
@@ -148,23 +157,31 @@ Lista usuarios del parque del admin autenticado. Excluye superusuarios. Solo `ad
 
 ### `POST /api/users/`
 
-Crea un usuario `guard` o `company` en el parque del admin. Solo `admin`.
+Crea un usuario `guard` o `tenant` en el parque del admin. Solo `admin`.
 
 - El parque se asigna automáticamente al parque del admin.
-- Si `role=company`, `destinations` es obligatorio y deben pertenecer al parque del admin.
+- Si `role=tenant`, `destinations` es obligatorio y deben pertenecer al parque del admin.
 - No se puede crear `role=admin` desde este endpoint.
 
 **Body — guardia**
 ```json
-{ "email": "guardia01@parque.com", "password": "temp1234", "role": "guard" }
+{
+  "email": "guardia01@parque.com",
+  "password": "temp1234",
+  "first_name": "Luis",
+  "last_name": "Martínez",
+  "role": "guard"
+}
 ```
 
-**Body — empresa**
+**Body — inquilino**
 ```json
 {
-  "email": "empresa@abc.com",
+  "email": "inquilino@abc.com",
   "password": "temp1234",
-  "role": "company",
+  "first_name": "Carlos",
+  "last_name": "López",
+  "role": "tenant",
   "destinations": [3, 7]
 }
 ```

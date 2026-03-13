@@ -38,9 +38,10 @@ def guard(park):
 
 
 @pytest.fixture
-def company(park, destination):
-    user = User.objects.create_user(email="company@park.com", password="pass1234", role="company", park=park)
-    user.destinations.set([destination])
+def tenant(park, destination):
+    user = User.objects.create_user(email="tenant@park.com", password="pass1234", role="tenant", park=park)
+    destination.responsible = user
+    destination.save()
     return user
 
 
@@ -59,7 +60,7 @@ def auth_client(user):
 
 
 @pytest.mark.django_db
-def test_list_users_admin_returns_200(admin, guard, company):
+def test_list_users_admin_returns_200(admin, guard, tenant):
     response = auth_client(admin).get(URL)
     assert response.status_code == 200
 
@@ -81,7 +82,7 @@ def test_list_users_excludes_superusers(admin):
 
 
 @pytest.mark.django_db
-def test_list_users_filter_by_role(admin, guard, company):
+def test_list_users_filter_by_role(admin, guard, tenant):
     response = auth_client(admin).get(URL, {"role": "guard"})
     assert response.status_code == 200
     assert all(u["role"] == "guard" for u in response.data["results"])
@@ -104,8 +105,8 @@ def test_list_users_guard_forbidden(guard):
 
 
 @pytest.mark.django_db
-def test_list_users_company_forbidden(company):
-    response = auth_client(company).get(URL)
+def test_list_users_tenant_forbidden(tenant):
+    response = auth_client(tenant).get(URL)
     assert response.status_code == 403
 
 
@@ -135,11 +136,11 @@ def test_create_guard_park_assigned_automatically(admin):
 
 
 @pytest.mark.django_db
-def test_create_company_with_destinations_returns_201(admin, destination):
+def test_create_tenant_with_destinations_returns_201(admin, destination):
     payload = {
-        "email": "new_company@park.com",
+        "email": "new_tenant@park.com",
         "password": "pass1234",
-        "role": "company",
+        "role": "tenant",
         "destinations": [destination.id],
     }
     response = auth_client(admin).post(URL, payload)
@@ -148,18 +149,18 @@ def test_create_company_with_destinations_returns_201(admin, destination):
 
 
 @pytest.mark.django_db
-def test_create_company_without_destinations_returns_400(admin):
-    payload = {"email": "new_company@park.com", "password": "pass1234", "role": "company"}
+def test_create_tenant_without_destinations_returns_400(admin):
+    payload = {"email": "new_tenant@park.com", "password": "pass1234", "role": "tenant"}
     response = auth_client(admin).post(URL, payload)
     assert response.status_code == 400
 
 
 @pytest.mark.django_db
-def test_create_company_with_destination_from_other_park_returns_400(admin, other_destination):
+def test_create_tenant_with_destination_from_other_park_returns_400(admin, other_destination):
     payload = {
-        "email": "new_company@park.com",
+        "email": "new_tenant@park.com",
         "password": "pass1234",
-        "role": "company",
+        "role": "tenant",
         "destinations": [other_destination.id],
     }
     response = auth_client(admin).post(URL, payload)

@@ -17,7 +17,6 @@ class CustomUserAdmin(UserAdmin):
         (None, {"fields": ("email", "password")}),
         ("Información personal", {"fields": ("username", "first_name", "last_name")}),
         ("Parque Industrial", {"fields": ("role", "park")}),
-        ("Destinos", {"fields": ("destinations",)}),
         ("Permisos", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Fechas", {"fields": ("last_login", "date_joined")}),
     )
@@ -27,7 +26,7 @@ class CustomUserAdmin(UserAdmin):
             None,
             {
                 "classes": ("wide",),
-                "fields": ("email", "username", "role", "park", "destinations", "password1", "password2", "is_active"),
+                "fields": ("email", "username", "role", "park", "password1", "password2", "is_active"),
             },
         ),
     )

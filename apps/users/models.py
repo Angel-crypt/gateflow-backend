@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
-from apps.destinations.models import Destination, IndustrialPark
+from apps.destinations.models import IndustrialPark
 
 
 class UserManager(BaseUserManager):
@@ -25,7 +25,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "admin", "Administrador"
         GUARD = "guard", "Guardia"
-        COMPANY = "company", "Empresa"
+        TENANT = "tenant", "Inquilino"
 
     username = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
@@ -37,12 +37,6 @@ class User(AbstractUser):
         blank=True,
         related_name="users",
     )
-    destinations = models.ManyToManyField(
-        Destination,
-        blank=True,
-        related_name="company_users",
-    )
-
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["role"]
 
