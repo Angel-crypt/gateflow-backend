@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -5,6 +6,7 @@ class IndustrialPark(models.Model):
     name = models.CharField(max_length=100)
     address = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Parque Industrial"
@@ -21,13 +23,19 @@ class Destination(models.Model):
 
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=10, choices=Type.choices)
-    contact_info = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
     park = models.ForeignKey(
         IndustrialPark,
         on_delete=models.CASCADE,
         related_name="destinations",
     )
+    responsible = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="destinations",
+    )
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Destino"
