@@ -7,38 +7,30 @@ Table destinations_industrialpark {
   name        varchar(100)
   address     text        [note: 'blank=True']
   created_at  datetime
+  is_active   boolean     [default: true]
 }
 
 Table destinations_destination {
-  id           integer     [pk, increment]
-  name         varchar(100)
-  type         varchar(10) [note: '"company" | "area"']
-  contact_info text        [null]
-  is_active    boolean     [default: true]
-  park_id      integer     [ref: > destinations_industrialpark.id, note: 'SET_NULL', null]
+  id              integer     [pk, increment]
+  name            varchar(100)
+  type            varchar(10) [note: '"company" | "area"']
+  is_active       boolean     [default: true]
+  park_id         integer     [ref: > destinations_industrialpark.id, note: 'CASCADE']
+  responsible_id  integer     [ref: > users_user.id, note: 'SET_NULL', null]
 }
 
 Table users_user {
   id           integer     [pk, increment]
   email        varchar     [unique]
-  username     varchar(150)[note: 'autogenerado desde email']
-  role         varchar(20) [note: '"admin" | "guard" | "company"']
+  username     varchar(150)
+  first_name   varchar(150)[note: 'blank=True']
+  last_name    varchar(150)[note: 'blank=True']
+  role         varchar(20) [note: '"admin" | "guard" | "tenant"']
   is_active    boolean     [default: true]
   is_staff     boolean     [default: false]
   is_superuser boolean     [default: false]
   date_joined  datetime
   park_id      integer     [ref: > destinations_industrialpark.id, note: 'SET_NULL', null]
-}
-
-// Tabla intermedia del M2M User.destinations
-Table users_user_destinations {
-  id             integer [pk, increment]
-  user_id        integer [ref: > users_user.id]
-  destination_id integer [ref: > destinations_destination.id]
-
-  indexes {
-    (user_id, destination_id) [unique]
-  }
 }
 
 Table passes_accesspass {
@@ -53,13 +45,11 @@ Table passes_accesspass {
   is_used        boolean     [default: false]
   created_at     datetime
 
-  // FK al usuario company que generó el pase
-  company_id     integer     [ref: > users_user.id, note: 'SET_NULL', null]
+  // FK al usuario tenant que generó el pase
+  tenant_id      integer     [ref: > users_user.id, note: 'SET_NULL', null]
 
   // FK al destino específico elegido al generar el pase
-  // (debe ser uno de los destinos del M2M del company)
   destination_id integer     [ref: > destinations_destination.id, note: 'SET_NULL', null]
-
 }
 
 Table access_accesslog {
