@@ -11,7 +11,7 @@ Sistema de gestión de accesos para parques industriales. Empresas generan pases
 | Rol | Creado por | Responsabilidad |
 |---|---|---|
 | `is_superuser` | Django shell / createsuperuser | Crea parques industriales y primeros admins vía Django Admin |
-| `admin` | superuser | Gestiona su parque: users, destinations, visit_reasons |
+| `admin` | superuser | Gestiona su parque: users, destinations |
 | `guard` | admin | Registra entradas/salidas, valida QR en la puerta |
 | `company` | admin | Genera pases QR para sus destinos asignados |
 
@@ -24,7 +24,7 @@ Cuatro apps por dominio — el rol define permisos, no estructura de datos.
 | App | Modelos | Responsabilidad |
 |---|---|---|
 | `users` | `User` | Autenticación, roles, JWT |
-| `destinations` | `IndustrialPark`, `Destination`, `VisitReason` | Catálogos del parque |
+| `destinations` | `IndustrialPark`, `Destination` | Catálogos del parque |
 | `passes` | `AccessPass` | Generación de pases QR |
 | `access` | `AccessLog` | Registro de entradas/salidas y métricas |
 
@@ -86,8 +86,6 @@ Guard escanea QR → valida AccessPass → crea AccessLog
 | Users | GET/PATCH | `/users/{id}/` | admin |
 | Destinations | GET/POST | `/destinations/` | admin (W), otros (R) |
 | Destinations | GET/PATCH | `/destinations/{id}/` | admin (W), otros (R) |
-| VisitReasons | GET/POST | `/visit-reasons/` | admin (W), otros (R) |
-| VisitReasons | PATCH | `/visit-reasons/{id}/` | admin |
 | Passes | GET/POST | `/passes/` | company (W), admin (R) |
 | Passes | GET | `/passes/{id}/` | company (propio), admin |
 | Passes | POST | `/passes/validate/` | guard |
@@ -112,7 +110,6 @@ IndustrialPark (1) ──< User (M)
 User (M) >──< Destination (M)  [via users_user_destinations]
 User(company) (1) ──< AccessPass (M)
 Destination (1) ──< AccessPass (M)   ← FK directa, no a User
-VisitReason (1) ──< AccessPass (M)
 AccessPass (1) ──< AccessLog (M)     ← null si entrada manual
 Destination (1) ──< AccessLog (M)    ← desnormalizado
 User(guard) (1) ──< AccessLog (M)
@@ -127,7 +124,6 @@ User(guard) (1) ──< AccessLog (M)
 | `IndustrialPark` | Implementado |
 | `User` | Implementado (⚠️ campo `destinations` M2M pendiente de migrar — requiere crear `Destination` primero) |
 | `Destination` | Pendiente |
-| `VisitReason` | Pendiente |
 | `AccessPass` | Pendiente |
 | `AccessLog` | Pendiente |
 

@@ -13,7 +13,6 @@
     { "name": "Auth",         "description": "Autenticación y sesión — todos los roles" },
     { "name": "Users",        "description": "Gestión de usuarios — admin del parque" },
     { "name": "Destinations", "description": "Destinos y parque — admin escribe, otros leen" },
-    { "name": "VisitReasons", "description": "Catálogo de motivos — admin escribe, otros leen" },
     { "name": "Passes",       "description": "Pases QR — company genera, guard valida" },
     { "name": "AccessLogs",   "description": "Registro de accesos — guard opera, admin consulta" },
     { "name": "Metrics",      "description": "Métricas operativas — solo admin" }
@@ -356,82 +355,6 @@
       }
     },
 
-    "/visit-reasons/": {
-      "get": {
-        "tags": ["VisitReasons"],
-        "summary": "Listar motivos de visita",
-        "description": "Todos los roles. Filtra por parque del usuario. Admin ve activos e inactivos, otros solo activos.",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "is_active", "in": "query", "description": "Solo admin", "schema": { "type": "boolean" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Lista de motivos",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/VisitReason" } }
-              }
-            }
-          },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
-        }
-      },
-      "post": {
-        "tags": ["VisitReasons"],
-        "summary": "Crear motivo de visita",
-        "description": "Solo admin. Se asocia automáticamente al parque del admin.",
-        "security": [{ "BearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/VisitReasonRequest" },
-              "example": { "name": "Visita comercial" }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Motivo creado",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/VisitReason" } }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
-        }
-      }
-    },
-
-    "/visit-reasons/{id}/": {
-      "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
-      "patch": {
-        "tags": ["VisitReasons"],
-        "summary": "Actualizar motivo de visita",
-        "description": "Solo admin.",
-        "security": [{ "BearerAuth": [] }],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/VisitReasonRequest" },
-              "example": { "is_active": false }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Motivo actualizado",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/VisitReason" } }
-            }
-          },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
-        }
-      }
-    },
-
     "/passes/": {
       "get": {
         "tags": ["Passes"],
@@ -472,11 +395,11 @@
               "examples": {
                 "single_use": {
                   "summary": "Uso único",
-                  "value": { "visitor_name": "Juan Pérez", "plate": "ABC-1234", "destination_id": 3, "reason_id": 1, "pass_type": "single_use", "valid_from": "2025-06-01", "valid_until": "2025-06-01" }
+                  "value": { "visitor_name": "Juan Pérez", "plate": "ABC-1234", "destination_id": 3, "pass_type": "single_use", "valid_from": "2025-06-01", "valid_until": "2025-06-01" }
                 },
                 "day_pass": {
                   "summary": "Pase día",
-                  "value": { "visitor_name": "María López", "plate": "XYZ-9876", "destination_id": 3, "reason_id": 2, "pass_type": "day_pass", "valid_from": "2025-06-01", "valid_until": "2025-06-30" }
+                  "value": { "visitor_name": "María López", "plate": "XYZ-9876", "destination_id": 3, "pass_type": "day_pass", "valid_from": "2025-06-01", "valid_until": "2025-06-30" }
                 }
               }
             }
@@ -597,7 +520,7 @@
           "content": {
             "application/json": {
               "schema": { "$ref": "#/components/schemas/AccessLogCreateRequest" },
-              "example": { "visitor_name": "Carlos Ruiz", "plate": "DEF-5678", "destination_id": 3, "reason_id": 1 }
+              "example": { "visitor_name": "Carlos Ruiz", "plate": "DEF-5678", "destination_id": 3 }
             }
           }
         },
@@ -937,23 +860,6 @@
         ]
       },
 
-      "VisitReason": {
-        "type": "object",
-        "properties": {
-          "id":        { "type": "integer" },
-          "name":      { "type": "string" },
-          "is_active": { "type": "boolean" }
-        }
-      },
-
-      "VisitReasonRequest": {
-        "type": "object",
-        "properties": {
-          "name":      { "type": "string", "maxLength": 80 },
-          "is_active": { "type": "boolean" }
-        }
-      },
-
       "Pass": {
         "type": "object",
         "properties": {
@@ -961,7 +867,7 @@
           "visitor_name": { "type": "string" },
           "plate":        { "type": "string" },
           "destination":  { "$ref": "#/components/schemas/DestinationSummary" },
-          "reason":       { "$ref": "#/components/schemas/VisitReason" },
+          "visit_reason": { "type": "string", "nullable": true },
           "pass_type":    { "type": "string", "enum": ["single_use", "day_pass"] },
           "valid_from":   { "type": "string", "format": "date" },
           "valid_until":  { "type": "string", "format": "date" },
@@ -973,12 +879,12 @@
 
       "PassCreateRequest": {
         "type": "object",
-        "required": ["visitor_name", "plate", "destination_id", "reason_id", "pass_type", "valid_from", "valid_until"],
+        "required": ["visitor_name", "plate", "destination_id", "pass_type", "valid_from", "valid_until"],
         "properties": {
           "visitor_name":   { "type": "string", "maxLength": 100 },
           "plate":          { "type": "string", "maxLength": 20 },
           "destination_id": { "type": "integer", "description": "Debe ser uno de los destinos asignados al usuario company" },
-          "reason_id":      { "type": "integer" },
+          "visit_reason":   { "type": "string", "maxLength": 100 },
           "pass_type":      { "type": "string", "enum": ["single_use", "day_pass"] },
           "valid_from":     { "type": "string", "format": "date" },
           "valid_until":    { "type": "string", "format": "date" }
@@ -1007,7 +913,7 @@
           "visitor_name": { "type": "string" },
           "plate":        { "type": "string" },
           "destination":  { "$ref": "#/components/schemas/DestinationSummary" },
-          "reason":       { "$ref": "#/components/schemas/VisitReason" },
+          "visit_reason": { "type": "string", "nullable": true },
           "pass_id":      { "type": "integer", "nullable": true },
           "entry_time":   { "type": "string", "format": "date-time" },
           "exit_time":    { "type": "string", "format": "date-time", "nullable": true },
@@ -1017,12 +923,12 @@
 
       "AccessLogCreateRequest": {
         "type": "object",
-        "required": ["visitor_name", "plate", "destination_id", "reason_id"],
+        "required": ["visitor_name", "plate", "destination_id"],
         "properties": {
           "visitor_name":   { "type": "string", "maxLength": 100 },
           "plate":          { "type": "string", "maxLength": 20 },
           "destination_id": { "type": "integer" },
-          "reason_id":      { "type": "integer" }
+          "visit_reason":   { "type": "string", "maxLength": 100 }
         }
       },
 
