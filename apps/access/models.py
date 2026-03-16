@@ -32,6 +32,7 @@ class AccessLog(models.Model):
     )
     visitor_name = models.CharField(max_length=150)
     plate = models.CharField(max_length=20, blank=True)
+    notes = models.TextField(blank=True)
     access_type = models.CharField(
         max_length=10,
         choices=AccessType.choices,
