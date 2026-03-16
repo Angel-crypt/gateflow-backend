@@ -16,3 +16,7 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
 class AccessLogCreateView(generics.CreateAPIView):
     queryset = AccessLog.objects.all()
     permission_classes = [IsAuthenticated]
+
+class AccessPassDetailView(generics.RetrieveAPIView):
+    queryset = AccessPass.objects.all()
+    permission_classes = [IsAuthenticated]
