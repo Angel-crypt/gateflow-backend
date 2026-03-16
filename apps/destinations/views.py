@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from apps.users.models import User
 
 from .models import Destination, IndustrialPark
-from .serializers import DestinationSerializer, DestinationWriteSerializer
+from .serializers import DestinationSerializer, DestinationWriteSerializer, IndustrialParkSerializer
 
 
 class IsAdmin(permissions.BasePermission):
@@ -16,6 +16,7 @@ class IsAdmin(permissions.BasePermission):
 class IndustrialParkListView(generics.ListAPIView):
     queryset = IndustrialPark.objects.all()
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = IndustrialParkSerializer
 
 
 class DestinationListCreateView(generics.ListCreateAPIView):
