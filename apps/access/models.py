@@ -81,6 +81,7 @@ class AccessPass(models.Model):
     )
     visitor_name = models.CharField(max_length=150)
     plate = models.CharField(max_length=20, blank=True)
+    qr_token = models.CharField(max_length=255, unique=True)
     pass_type = models.CharField(
         max_length=20,
         choices=PassType.choices,
