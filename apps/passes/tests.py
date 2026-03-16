@@ -5,4 +5,5 @@ from .models import AccessPass
 
 
 class AccessPassModelTest(TestCase):
-    pass
+    def test_access_pass_model_exists(self):
+        self.assertIsNotNone(AccessPass)
