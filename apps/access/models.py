@@ -94,3 +94,8 @@ class AccessPass(models.Model):
 
     def __str__(self):
         return f"{self.visitor_name} → {self.destination.name}"
+    
+    class Meta:
+    ordering = ["-created_at"]
+    verbose_name = "Access Pass"
+    verbose_name_plural = "Access Passes"
