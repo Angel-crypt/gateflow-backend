@@ -1,4 +1,3 @@
-# Create your views here.
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
@@ -10,6 +9,6 @@ class AccessLogListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
 
-class AccessPassListView(generics.ListAPIView):
+class AccessPassListCreateView(generics.ListCreateAPIView):
     queryset = AccessPass.objects.all()
     permission_classes = [IsAuthenticated]
