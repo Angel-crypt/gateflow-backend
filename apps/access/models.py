@@ -51,6 +51,12 @@ class AccessLog(models.Model):
     def __str__(self):
         return f"{self.visitor_name} - {self.destination.name} ({self.status})"
     
+    def register_exit(self):
+    from django.utils import timezone
+    self.exit_time = timezone.now()
+    self.status = "exited"
+    self.save(update_fields=["exit_time", "status"])
+    
         class Meta:
         ordering = ["-entry_time"]
         verbose_name = "Access Log"
