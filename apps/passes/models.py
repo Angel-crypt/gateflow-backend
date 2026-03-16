@@ -33,3 +33,8 @@ class AccessPass(models.Model):
 
     def __str__(self):
         return f"{self.visitor_name} - {self.destination.name}"
+    
+    def is_valid(self):
+        from django.utils import timezone
+        now = timezone.now()
+        return self.is_active and self.valid_from <= now <= self.valid_to
