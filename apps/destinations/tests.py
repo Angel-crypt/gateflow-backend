@@ -10,4 +10,5 @@ class IndustrialParkModelTest(TestCase):
 
 
 class DestinationModelTest(TestCase):
-    pass
+    def test_destination_model_exists(self):
+        self.assertIsNotNone(Destination)
