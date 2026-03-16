@@ -49,3 +49,8 @@ class AccessLog(models.Model):
 
     def __str__(self):
         return f"{self.visitor_name} - {self.destination.name} ({self.status})"
+    
+        class Meta:
+        ordering = ["-entry_time"]
+        verbose_name = "Access Log"
+        verbose_name_plural = "Access Logs"
