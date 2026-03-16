@@ -7,7 +7,7 @@ from apps.passes.models import AccessPass
 from .models import AccessLog
 
 
-class AccessLogModelTest(TestCase):
+class TestAccessLogModel(TestCase):
     def test_access_log_model_exists(self):
         self.assertIsNotNone(AccessLog)
 
@@ -35,7 +35,7 @@ class AccessLogModelTest(TestCase):
         self.assertEqual(access_log.status, "closed")
 
 
-class AccessPassModelTest(TestCase):
+class TestAccessPassModel(TestCase):
     def test_access_pass_str(self):
         User = get_user_model()
 
