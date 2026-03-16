@@ -10,30 +10,49 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('destinations', '0002_destination'),
+        ("destinations", "0002_destination"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AccessPass',
+            name="AccessPass",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('visitor_name', models.CharField(max_length=150)),
-                ('plate', models.CharField(blank=True, max_length=20)),
-                ('pass_type', models.CharField(choices=[('single', 'Single Use'), ('day', 'Day Pass')], default='day', max_length=20)),
-                ('valid_from', models.DateTimeField()),
-                ('valid_to', models.DateTimeField()),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='created_passes', to=settings.AUTH_USER_MODEL)),
-                ('destination', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_passes', to='destinations.destination')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("visitor_name", models.CharField(max_length=150)),
+                ("plate", models.CharField(blank=True, max_length=20)),
+                (
+                    "pass_type",
+                    models.CharField(
+                        choices=[("single", "Single Use"), ("day", "Day Pass")], default="day", max_length=20
+                    ),
+                ),
+                ("valid_from", models.DateTimeField()),
+                ("valid_to", models.DateTimeField()),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="created_passes",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "destination",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="access_passes",
+                        to="destinations.destination",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Access Pass',
-                'verbose_name_plural': 'Access Passes',
-                'ordering': ['-created_at'],
+                "verbose_name": "Access Pass",
+                "verbose_name_plural": "Access Passes",
+                "ordering": ["-created_at"],
             },
         ),
     ]

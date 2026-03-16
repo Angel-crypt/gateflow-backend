@@ -1,6 +1,7 @@
-# Create your views here.
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import AccessPass
 
@@ -13,10 +14,6 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
 class AccessPassDetailView(generics.RetrieveAPIView):
     queryset = AccessPass.objects.all()
     permission_classes = [IsAuthenticated]
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 
 
 class AccessPassValidateView(APIView):
