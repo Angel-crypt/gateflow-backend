@@ -1,9 +1,10 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
 
 from apps.destinations.models import Destination, IndustrialPark
 from apps.passes.models import AccessPass
+
 from .models import AccessLog
 
 
