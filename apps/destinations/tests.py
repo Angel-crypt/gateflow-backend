@@ -5,7 +5,8 @@ from .models import Destination, IndustrialPark
 
 
 class IndustrialParkModelTest(TestCase):
-    pass
+    def test_industrial_park_model_exists(self):
+        self.assertIsNotNone(IndustrialPark)
 
 
 class DestinationModelTest(TestCase):
