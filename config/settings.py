@@ -27,15 +27,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Third party
+
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
-    # Local apps
-    "apps.users",
-    "apps.destinations",
-]
 
+    "apps.users.apps.UsersConfig",
+    "apps.destinations.apps.DestinationsConfig",
+    "apps.passes.apps.PassesConfig",
+    "apps.access.apps.AccessConfig",
+]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

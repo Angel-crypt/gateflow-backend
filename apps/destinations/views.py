@@ -4,13 +4,18 @@ from rest_framework.response import Response
 
 from apps.users.models import User
 
-from .models import Destination
+from .models import Destination, IndustrialPark
 from .serializers import DestinationSerializer, DestinationWriteSerializer
 
 
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request: Request, view) -> bool:
         return bool(request.user and request.user.is_authenticated and request.user.role == User.Role.ADMIN)
+
+
+class IndustrialParkListView(generics.ListAPIView):
+    queryset = IndustrialPark.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class DestinationListCreateView(generics.ListCreateAPIView):
