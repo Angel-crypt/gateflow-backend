@@ -38,3 +38,8 @@ class AccessPass(models.Model):
         from django.utils import timezone
         now = timezone.now()
         return self.is_active and self.valid_from <= now <= self.valid_to
+    
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Access Pass"
+        verbose_name_plural = "Access Passes"
