@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("destinations", "0002_destination"),
+        ("destinations", "0002_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("visitor_name", models.CharField(max_length=150)),
-                ("plate", models.CharField(blank=True, max_length=20)),
+                ("plate", models.CharField(max_length=20)),
                 (
                     "pass_type",
                     models.CharField(
