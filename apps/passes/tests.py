@@ -10,3 +10,7 @@ class AccessPassModelTest(TestCase):
 
     def test_is_valid_method_exists(self):
         self.assertTrue(hasattr(AccessPass, "is_valid"))
+
+    def test_can_create_access_pass_instance(self):
+        access_pass = AccessPass()
+        self.assertIsInstance(access_pass, AccessPass)
