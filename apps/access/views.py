@@ -20,3 +20,7 @@ class AccessLogCreateView(generics.CreateAPIView):
 class AccessPassDetailView(generics.RetrieveAPIView):
     queryset = AccessPass.objects.all()
     permission_classes = [IsAuthenticated]
+
+class AccessLogDetailView(generics.RetrieveAPIView):
+    queryset = AccessLog.objects.all()
+    permission_classes = [IsAuthenticated]
