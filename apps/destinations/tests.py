@@ -4,7 +4,7 @@ from django.test import TestCase
 from .models import Destination, IndustrialPark
 
 
-class IndustrialParkModelTest(TestCase):
+class TestIndustrialParkModel(TestCase):
     def test_industrial_park_model_exists(self):
         self.assertIsNotNone(IndustrialPark)
 
@@ -13,7 +13,7 @@ class IndustrialParkModelTest(TestCase):
         self.assertIsInstance(park, IndustrialPark)
 
 
-class DestinationModelTest(TestCase):
+class TestDestinationModel(TestCase):
     def test_destination_model_exists(self):
         self.assertIsNotNone(Destination)
 
