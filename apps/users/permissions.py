@@ -6,3 +6,13 @@ from rest_framework.views import APIView
 class IsAdmin(BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         return bool(request.user and request.user.is_authenticated and request.user.role == "admin")
+
+
+class IsAdminOrTenant(BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return bool(request.user and request.user.is_authenticated and request.user.role in ("admin", "tenant"))
+
+
+class IsGuard(BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return bool(request.user and request.user.is_authenticated and request.user.role == "guard")
