@@ -19,7 +19,7 @@ class AccessPass(models.Model):
         related_name="created_passes",
     )
     visitor_name = models.CharField(max_length=150)
-    plate = models.CharField(max_length=20, blank=True)
+    plate = models.CharField(max_length=20)
     pass_type = models.CharField(
         max_length=20,
         choices=PassType.choices,
