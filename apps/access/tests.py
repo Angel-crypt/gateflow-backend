@@ -6,7 +6,26 @@ from .models import AccessLog, AccessPass
 
 
 class AccessLogModelTest(TestCase):
-    pass
+
+    def test_register_exit_updates_status_and_exit_time(self):
+        from django.utils import timezone
+
+        User = get_user_model()
+
+        user = User.objects.create(email="guard@test.com")
+        destination = Destination.objects.create(name="Main Gate")
+
+        access_log = AccessLog.objects.create(
+            destination=destination,
+            guard=user,
+            visitor_name="Jane Doe",
+            entry_time=timezone.now(),
+        )
+
+        access_log.register_exit()
+
+        self.assertIsNotNone(access_log.exit_time)
+        self.assertEqual(access_log.status, "exited")
 
 
 class AccessPassModelTest(TestCase):
