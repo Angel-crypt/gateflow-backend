@@ -12,6 +12,21 @@ from .serializers import AccessPassSerializer, AccessPassWriteSerializer
 
 
 class AccessPassListCreateView(generics.ListCreateAPIView):
+    """
+    Listar y crear pases de acceso. Solo Admin y Tenant.
+
+    **GET** — El Admin ve todos los pases de su parque. El Tenant ve únicamente
+    los pases correspondientes a los destinos de los que es responsable.
+
+    **POST** — Crea un nuevo pase de acceso para un visitante. El campo `destination`
+    es opcional si el usuario tiene un único destino disponible; en ese caso se asigna
+    automáticamente. Si tiene varios, debe seleccionarlo explícitamente.
+    El `id` retornado en la respuesta es el valor que el frontend debe usar para
+    generar el código QR.
+
+    Campos requeridos: `visitor_name`, `plate`, `valid_from`, `valid_to`.
+    """
+
     permission_classes = [IsAdminOrTenant]
 
     def get_serializer_class(self):
@@ -33,6 +48,17 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
 
 
 class AccessPassDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Detalle, editar y eliminar un pase de acceso. Solo Admin y Tenant.
+
+    **GET** — Retorna el detalle del pase. El Tenant solo accede a pases de sus destinos.
+
+    **PATCH** — Permite modificar parcialmente un pase: extender `valid_to`,
+    cambiar `plate`, o desactivarlo con `is_active: false`.
+
+    **DELETE** — Elimina permanentemente el pase.
+    """
+
     permission_classes = [IsAdminOrTenant]
     http_method_names = ["get", "patch", "delete"]
 
@@ -57,6 +83,16 @@ class AccessPassDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class AccessPassValidateView(APIView):
+    """
+    Validar un pase de acceso por ID. Cualquier usuario autenticado.
+
+    Usado por el guardia al escanear un código QR. Recibe el `pass_id` y retorna
+    los datos completos del pase si es válido (activo y dentro del rango de fechas).
+
+    Retorna 400 si el pase está inactivo o fuera del rango de validez.
+    Retorna 404 si el pase no existe.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:

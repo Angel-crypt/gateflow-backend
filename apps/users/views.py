@@ -17,10 +17,23 @@ from .serializers import (
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Obtener tokens JWT.
+
+    Retorna `access`, `refresh` y el objeto `user` con el perfil completo del usuario autenticado.
+    """
+
     serializer_class = CustomTokenObtainPairSerializer
 
 
 class LogoutView(APIView):
+    """
+    Cerrar sesión.
+
+    Invalida el `refresh` token enviado en el cuerpo. A partir de este momento
+    dicho token no podrá usarse para generar nuevos `access` tokens.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -35,6 +48,13 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
+    """
+    Perfil del usuario autenticado.
+
+    Retorna los datos completos del usuario que realiza la petición,
+    incluyendo su parque industrial y destinos asociados.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -42,6 +62,14 @@ class MeView(APIView):
 
 
 class ChangePasswordView(APIView):
+    """
+    Cambiar contraseña.
+
+    Requiere la contraseña actual para confirmar la identidad.
+    La nueva contraseña debe tener al menos 8 caracteres.
+    Retorna 204 sin cuerpo si el cambio fue exitoso.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -52,6 +80,18 @@ class ChangePasswordView(APIView):
 
 
 class UserListCreateView(generics.ListCreateAPIView):
+    """
+    Listar y crear usuarios del parque. Solo Admin.
+
+    **GET** — Retorna todos los usuarios (guardias e inquilinos) del mismo parque industrial
+    que el admin autenticado. Soporta filtros por query param:
+    - `role`: `guard` | `tenant`
+    - `is_active`: `true` | `false`
+
+    **POST** — Crea un nuevo usuario asignado automáticamente al parque del admin.
+    Solo se permiten roles `guard` y `tenant`; no se puede crear otro admin.
+    """
+
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get_serializer_class(self):

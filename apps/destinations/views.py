@@ -14,12 +14,28 @@ class IsAdmin(permissions.BasePermission):
 
 
 class IndustrialParkListView(generics.ListAPIView):
+    """
+    Listar parques industriales. Cualquier usuario autenticado.
+
+    Retorna todos los parques industriales registrados en el sistema.
+    """
+
     queryset = IndustrialPark.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = IndustrialParkSerializer
 
 
 class DestinationListCreateView(generics.ListCreateAPIView):
+    """
+    Listar y crear destinos. Lectura: Admin y Tenant. Creación: solo Admin.
+
+    **GET** — El Admin ve todos los destinos de su parque. El Tenant ve únicamente
+    los destinos de los que es responsable.
+
+    **POST** — Solo el Admin puede crear destinos. El parque se asigna automáticamente
+    al del admin autenticado. El campo `responsible` debe ser un usuario del mismo parque.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
@@ -46,6 +62,18 @@ class DestinationListCreateView(generics.ListCreateAPIView):
 
 
 class DestinationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Detalle, editar y eliminar un destino. Lectura: Admin y Tenant. Escritura: solo Admin.
+
+    **GET** — Admin y Tenant pueden consultar el detalle. El Tenant solo accede
+    a destinos de los que es responsable.
+
+    **PATCH** — Solo Admin. Permite actualizar parcialmente nombre, tipo, responsable
+    o estado activo del destino.
+
+    **DELETE** — Solo Admin.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["get", "patch", "delete"]
 

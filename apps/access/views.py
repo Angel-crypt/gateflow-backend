@@ -9,6 +9,13 @@ from .serializers import AccessLogCreateSerializer, AccessLogSerializer
 
 
 class AccessLogListView(generics.ListAPIView):
+    """
+    Listar registros de acceso del parque. Solo Guard.
+
+    Retorna todos los registros de entrada/salida correspondientes
+    al parque industrial del guardia autenticado, ordenados por `entry_time` descendente.
+    """
+
     permission_classes = [IsGuard]
     serializer_class = AccessLogSerializer
 
@@ -17,6 +24,23 @@ class AccessLogListView(generics.ListAPIView):
 
 
 class AccessLogCreateView(generics.CreateAPIView):
+    """
+    Registrar un acceso. Solo Guard.
+
+    Soporta dos flujos según si se provee `access_pass` o no:
+
+    **Flujo QR** (`access_pass` presente) — El guardia escanea el código QR y obtiene
+    el ID del pase. Al enviar solo `access_pass`, el sistema valida que el pase sea
+    vigente y pertenezca al parque, luego transcribe automáticamente `visitor_name`,
+    `plate` y `destination` desde el pase. El campo `access_type` se establece en `qr`.
+
+    **Flujo Manual** (`access_pass` ausente) — El guardia ingresa manualmente
+    `visitor_name`, `plate` y `destination`. El `access_type` se establece en `manual`.
+
+    En ambos casos, el `guard` se toma del perfil del usuario autenticado y
+    `entry_time` se asigna automáticamente al momento de la petición si no se provee.
+    """
+
     permission_classes = [IsGuard]
 
     def create(self, request: Request, *args, **kwargs) -> Response:
@@ -27,6 +51,14 @@ class AccessLogCreateView(generics.CreateAPIView):
 
 
 class AccessLogDetailView(generics.RetrieveAPIView):
+    """
+    Detalle de un registro de acceso. Solo Guard.
+
+    Retorna el registro completo con datos del pase asociado (si aplica),
+    destino, guardia que registró, tiempos de entrada/salida y estado.
+    Solo accede a registros del parque del guardia autenticado.
+    """
+
     permission_classes = [IsGuard]
     serializer_class = AccessLogSerializer
 
