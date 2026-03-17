@@ -1,0 +1,726 @@
+{
+  "info": {
+    "name": "GateFlow API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "# GateFlow API\n\nAPI REST para el control de acceso a parques industriales.\n\n---\n\n## Roles del sistema\n\n| Rol | Descripción |\n|-----|-------------|\n| `admin` | Administrador del parque. Gestiona usuarios, destinos y pases. |\n| `tenant` | Inquilino. Consulta sus destinos y crea pases para sus visitantes. |\n| `guard` | Guardia. Registra accesos (QR o manual) y consulta el historial. |\n\n---\n\n## Estructura de la colección\n\n- **Auth** — Login, logout y perfil. Común a todos los roles.\n- **Admin** — Todo lo que puede hacer el Administrador.\n- **Tenant** — Todo lo que puede hacer el Inquilino.\n- **Guard** — Todo lo que puede hacer el Guardia.\n\n---\n\n## Autenticación\n\nTodos los endpoints (excepto Login y Refresh) requieren:\n```\nAuthorization: Bearer {{access_token}}\n```\nCada Login de rol guarda el token en `access_token` y en su variable específica (`admin_token`, `tenant_token`, `guard_token`).\n\n---\n\n## Variables de entorno\n\n| Variable | Descripción |\n|----------|-------------|\n| `base_url` | URL base (`http://localhost:8000`) |\n| `access_token` | Token activo para el request actual |\n| `refresh_token` | Token de refresco del usuario activo |\n| `admin_token` | Token persistente del admin |\n| `tenant_token` | Token persistente del tenant |\n| `guard_token` | Token persistente del guardia |\n| `user_id` | ID del último usuario creado |\n| `destination_id` | ID del último destino creado |\n| `pass_id` | ID del último pase creado (usado para generar QR) |\n| `access_log_id` | ID del último registro de acceso creado |"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "# Autenticación\n\nEndpoints de sesión y perfil. No requieren rol específico.\n\n**Base path:** `/auth/`\n\n> Login y Refresh no requieren token (`noauth`).",
+      "item": [
+        {
+          "name": "Login - Admin",
+          "description": "**POST** `/auth/login/`\n\nInicia sesión como Administrador.\n\n**Body:**\n```json\n{\n  \"email\": \"admin@demo.com\",\n  \"password\": \"admin1234\"\n}\n```\n\n**Respuesta (200):**\n```json\n{\n  \"access\": \"<token>\",\n  \"refresh\": \"<token>\",\n  \"user\": { \"id\": 1, \"email\": \"admin@demo.com\", \"role\": \"admin\", \"park\": { \"id\": 1, \"name\": \"Parque Industrial Norte\" }, ... }\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `admin_token`.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.environment.set('access_token', res.access);",
+                  "pm.environment.set('refresh_token', res.refresh);",
+                  "pm.environment.set('admin_token', res.access);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{base_url}}/auth/login/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@demo.com\",\n  \"password\": \"admin1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login - Tenant",
+          "description": "**POST** `/auth/login/`\n\nInicia sesión como Inquilino.\n\n**Body:**\n```json\n{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\"\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `tenant_token`.\n\n> El tenant debe haber sido creado previamente por un Admin.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.environment.set('access_token', res.access);",
+                  "pm.environment.set('refresh_token', res.refresh);",
+                  "pm.environment.set('tenant_token', res.access);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{base_url}}/auth/login/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login - Guard",
+          "description": "**POST** `/auth/login/`\n\nInicia sesión como Guardia.\n\n**Body:**\n```json\n{\n  \"email\": \"guardia01@parque.com\",\n  \"password\": \"temp1234\"\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `guard_token`.\n\n> El guardia debe haber sido creado previamente por un Admin.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.environment.set('access_token', res.access);",
+                  "pm.environment.set('refresh_token', res.refresh);",
+                  "pm.environment.set('guard_token', res.access);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{base_url}}/auth/login/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"guardia01@parque.com\",\n  \"password\": \"temp1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "description": "**POST** `/auth/refresh/`\n\nRenueva el `access` token cuando expira (por defecto 15 min).\n\n**Body:**\n```json\n{ \"refresh\": \"{{refresh_token}}\" }\n```\n\n**Script:** sobrescribe `access_token`.\n\n> Si el `refresh` también expiró (7 días), hacer Login nuevamente.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.environment.set('access_token', res.access);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{base_url}}/auth/refresh/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "description": "**POST** `/auth/logout/`\n\nInvalida el `refresh` token (blacklist). Requiere estar autenticado.\n\n**Body:**\n```json\n{ \"refresh\": \"{{refresh_token}}\" }\n```\n\n**Respuesta exitosa:** `204 No Content`\n\n**Errores:** `400` si el token ya es inválido o no se envió.",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Me (Perfil)",
+          "description": "**GET** `/auth/me/`\n\nRetorna el perfil del usuario autenticado actualmente.\n\n**Respuesta (200):** datos del usuario con su parque y destinos asociados.\n\n> Para un tenant, `destinations` incluye los destinos de los que es responsable.",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/me/"
+          }
+        },
+        {
+          "name": "Change Password",
+          "description": "**POST** `/auth/change-password/`\n\nCambia la contraseña del usuario autenticado.\n\n**Body:**\n```json\n{\n  \"current_password\": \"admin1234\",\n  \"new_password\": \"nueva_segura123\",\n  \"confirm_password\": \"nueva_segura123\"\n}\n```\n\n**Reglas:** mínimo 8 caracteres, `new_password` == `confirm_password`, `current_password` debe ser correcta.\n\n**Respuesta exitosa:** `204 No Content`",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/change-password/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"admin1234\",\n  \"new_password\": \"nueva_segura123\",\n  \"confirm_password\": \"nueva_segura123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "# Administrador del Parque\n\nTodo lo que puede hacer el rol `admin`. Asegúrate de haber ejecutado **Login - Admin** antes de usar estos endpoints.\n\n**Capacidades:**\n- Crear y listar usuarios (guardias e inquilinos) de su parque.\n- Listar parques industriales.\n- Crear, editar, eliminar y listar destinos de su parque.\n- Crear, editar, eliminar y listar pases de acceso de su parque.\n- Validar pases (escaneo QR).\n\n> ⚠️ El Admin solo opera dentro de su propio parque industrial.",
+      "item": [
+        {
+          "name": "Usuarios",
+          "description": "# Usuarios — Admin\n\n**Base path:** `GET | POST /api/users/`\n\nEl Admin gestiona exclusivamente los usuarios de su parque. No puede crear otros admins.",
+          "item": [
+            {
+              "name": "List Users",
+              "description": "**GET** `/api/users/`\n\nListar todos los usuarios del parque (guardias e inquilinos).\n\n**Query params opcionales:**\n\n| Param | Valores | Descripción |\n|-------|---------|-------------|\n| `role` | `guard` \\| `tenant` | Filtrar por rol |\n| `is_active` | `true` \\| `false` | Filtrar por estado activo |\n\n**Respuesta (200):** lista de usuarios con su parque y destinos asociados.",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/users/",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "users", ""],
+                  "query": [
+                    { "key": "role", "value": "guard", "disabled": true },
+                    { "key": "role", "value": "tenant", "disabled": true },
+                    { "key": "is_active", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Guard",
+              "description": "**POST** `/api/users/`\n\nCrea un guardia en el parque del admin. El parque se asigna automáticamente.\n\n**Body:**\n```json\n{\n  \"email\": \"guardia01@parque.com\",\n  \"password\": \"temp1234\",\n  \"first_name\": \"Luis\",\n  \"last_name\": \"Martínez\",\n  \"role\": \"guard\"\n}\n```\n\n**Respuesta (201):** perfil completo del usuario creado.\n\n**Errores:** `400` email duplicado o contraseña < 8 chars.\n\n**Script:** guarda `user_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('user_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/users/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"guardia01@parque.com\",\n  \"password\": \"temp1234\",\n  \"first_name\": \"Luis\",\n  \"last_name\": \"Martínez\",\n  \"role\": \"guard\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Create Tenant",
+              "description": "**POST** `/api/users/`\n\nCrea un inquilino en el parque del admin. Puede ser asignado como `responsible` de un destino.\n\n**Body:**\n```json\n{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\",\n  \"first_name\": \"Carlos\",\n  \"last_name\": \"López\",\n  \"role\": \"tenant\"\n}\n```\n\n**Respuesta (201):** perfil completo del usuario creado.\n\n**Script:** guarda `user_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('user_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/users/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\",\n  \"first_name\": \"Carlos\",\n  \"last_name\": \"López\",\n  \"role\": \"tenant\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Parques Industriales",
+          "description": "# Parques Industriales — Admin\n\n**Base path:** `GET /api/destinations/parks/`",
+          "item": [
+            {
+              "name": "List Parks",
+              "description": "**GET** `/api/destinations/parks/`\n\nLista todos los parques industriales del sistema.\n\n**Respuesta (200):**\n```json\n[\n  { \"id\": 1, \"name\": \"Parque Industrial Norte\" }\n]\n```",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/destinations/parks/"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Destinos",
+          "description": "# Destinos — Admin\n\n**Base path:** `/api/destinations/`\n\nEl Admin tiene control total sobre los destinos de su parque: crear, leer, editar y eliminar.",
+          "item": [
+            {
+              "name": "List Destinations",
+              "description": "**GET** `/api/destinations/`\n\nLista todos los destinos del parque del admin, ordenados por `id`.\n\n**Respuesta (200):** lista con `park` y `responsible` anidados.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/destinations/"
+              }
+            },
+            {
+              "name": "Create Destination",
+              "description": "**POST** `/api/destinations/`\n\nCrea un destino sin responsable. El parque se asigna automáticamente al del admin.\n\n**Body:**\n```json\n{\n  \"name\": \"Empresa ABC\",\n  \"type\": \"company\",\n  \"responsible\": null\n}\n```\n\n**Campos:**\n\n| Campo | Tipo | Requerido | Descripción |\n|-------|------|-----------|-------------|\n| `name` | string | Sí | Nombre del destino |\n| `type` | `company` \\| `area` | Sí | Tipo |\n| `responsible` | int (user ID) \\| null | No | Tenant responsable del mismo parque |\n| `is_active` | bool | No | Por defecto `true` |\n\n**Respuesta (201):** destino completo.\n\n**Script:** guarda `destination_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('destination_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/destinations/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Empresa ABC\",\n  \"type\": \"company\",\n  \"responsible\": null\n}"
+                }
+              }
+            },
+            {
+              "name": "Create Destination (con responsable)",
+              "description": "**POST** `/api/destinations/`\n\nCrea un destino asignando un Tenant como responsable. Usa `{{user_id}}` del tenant creado previamente.\n\n**Body:**\n```json\n{\n  \"name\": \"Área de Logística\",\n  \"type\": \"area\",\n  \"responsible\": 3\n}\n```\n\n**Validación:** el `responsible` debe pertenecer al mismo parque.\n\n**Script:** guarda `destination_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('destination_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/destinations/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Área de Logística\",\n  \"type\": \"area\",\n  \"responsible\": {{user_id}}\n}"
+                }
+              }
+            },
+            {
+              "name": "Get Destination",
+              "description": "**GET** `/api/destinations/{{destination_id}}/`\n\nDetalle de un destino. Incluye `park` y `responsible` anidados.\n\n**Errores:** `404` si no existe o no pertenece al parque.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/destinations/{{destination_id}}/"
+              }
+            },
+            {
+              "name": "Update Destination",
+              "description": "**PATCH** `/api/destinations/{{destination_id}}/`\n\nActualiza parcialmente un destino. Solo enviar los campos a modificar.\n\n**Campos modificables:** `name`, `type`, `responsible`, `is_active`.\n\n**Respuesta (200):** destino actualizado completo.",
+              "request": {
+                "method": "PATCH",
+                "url": "{{base_url}}/api/destinations/{{destination_id}}/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Empresa ABC Actualizada\",\n  \"is_active\": true\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Destination",
+              "description": "**DELETE** `/api/destinations/{{destination_id}}/`\n\nElimina permanentemente un destino.\n\n**Respuesta exitosa:** `204 No Content`\n\n> ⚠️ Eliminación en cascada: se borran todos los `AccessPass` y `AccessLog` asociados.",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/destinations/{{destination_id}}/"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pases de Acceso",
+          "description": "# Pases de Acceso — Admin\n\n**Base path:** `/api/passes/`\n\nEl Admin ve y gestiona todos los pases de cualquier destino de su parque.\n\n### ¿Cómo funciona el QR?\n1. Crear un pase → obtener el `id` de la respuesta.\n2. El frontend usa ese `id` para generar el código QR.\n3. El Guard escanea el QR → obtiene el `id` → valida y registra el acceso.",
+          "item": [
+            {
+              "name": "List Passes",
+              "description": "**GET** `/api/passes/`\n\nLista todos los pases de destinos del parque, ordenados por `created_at` descendente.\n\n**Respuesta (200):** lista con `destination` y `created_by` anidados.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/passes/"
+              }
+            },
+            {
+              "name": "Create Pass (destino único - auto asignado)",
+              "description": "**POST** `/api/passes/`\n\nCrea un pase **sin especificar `destination`**. El sistema lo asigna automáticamente si el admin tiene exactamente 1 destino disponible.\n\n**Body:**\n```json\n{\n  \"visitor_name\": \"Juan Pérez\",\n  \"plate\": \"ABC-1234\",\n  \"pass_type\": \"day\",\n  \"valid_from\": \"2026-03-17T08:00:00Z\",\n  \"valid_to\": \"2026-03-17T18:00:00Z\"\n}\n```\n\n**`pass_type`:** `day` = pase de día | `single` = uso único.\n\n**El `id` de la respuesta es el valor para generar el QR.**\n\n**Script:** guarda `pass_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('pass_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"visitor_name\": \"Juan Pérez\",\n  \"plate\": \"ABC-1234\",\n  \"pass_type\": \"day\",\n  \"valid_from\": \"2026-03-17T08:00:00Z\",\n  \"valid_to\": \"2026-03-17T18:00:00Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Create Pass (seleccionar destino)",
+              "description": "**POST** `/api/passes/`\n\nCrea un pase especificando el destino. Usar cuando el admin tiene más de un destino.\n\n**Body:**\n```json\n{\n  \"destination\": 1,\n  \"visitor_name\": \"Ana Torres\",\n  \"plate\": \"XYZ-5678\",\n  \"pass_type\": \"single\",\n  \"valid_from\": \"2026-03-17T09:00:00Z\",\n  \"valid_to\": \"2026-03-17T12:00:00Z\"\n}\n```\n\n**Validaciones:** `destination` activo y dentro del parque. `valid_to` posterior a `valid_from`.\n\n**Script:** guarda `pass_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('pass_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"destination\": {{destination_id}},\n  \"visitor_name\": \"Ana Torres\",\n  \"plate\": \"XYZ-5678\",\n  \"pass_type\": \"single\",\n  \"valid_from\": \"2026-03-17T09:00:00Z\",\n  \"valid_to\": \"2026-03-17T12:00:00Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get Pass",
+              "description": "**GET** `/api/passes/{{pass_id}}/`\n\nDetalle de un pase con `destination` y `created_by` anidados.\n\n**Errores:** `404` si no existe o está fuera del parque.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/"
+              }
+            },
+            {
+              "name": "Update Pass",
+              "description": "**PATCH** `/api/passes/{{pass_id}}/`\n\nModifica parcialmente un pase. Casos de uso: extender `valid_to`, cambiar `plate`, reasignar `destination`.\n\n**Validación:** si se envía `valid_to`, debe ser posterior al `valid_from` vigente.\n\n**Respuesta (200):** pase actualizado completo.",
+              "request": {
+                "method": "PATCH",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"valid_to\": \"2026-03-17T20:00:00Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Deactivate Pass",
+              "description": "**PATCH** `/api/passes/{{pass_id}}/`\n\nDesactiva un pase sin eliminarlo (`is_active: false`). El QR deja de ser válido pero se mantiene el historial.\n\n**Respuesta (200):** pase con `is_active: false`.",
+              "request": {
+                "method": "PATCH",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"is_active\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Pass",
+              "description": "**DELETE** `/api/passes/{{pass_id}}/`\n\nElimina permanentemente un pase.\n\n**Respuesta:** `204 No Content`\n\n> ⚠️ Los `AccessLog` que referenciaban este pase quedarán con `access_pass: null`.",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/"
+              }
+            },
+            {
+              "name": "Validate Pass (QR)",
+              "description": "**POST** `/api/passes/validate/`\n\nVerifica si un pase es vigente dado su `id`.\n\n**Body:**\n```json\n{ \"pass_id\": 1 }\n```\n\n**Respuesta (200):** pase válido con todos sus datos.\n\n**Respuesta (400):** `{ \"detail\": \"El pase no es válido o ha expirado.\", \"is_valid\": false }`\n\n**Respuesta (404):** pase no encontrado.",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/validate/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pass_id\": {{pass_id}}\n}"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tenant",
+      "description": "# Inquilino\n\nTodo lo que puede hacer el rol `tenant`. Asegúrate de haber ejecutado **Login - Tenant** antes de usar estos endpoints.\n\n**Capacidades:**\n- Consultar los destinos de los que es responsable.\n- Crear, editar, eliminar y listar pases de acceso para sus destinos.\n- Validar pases (escaneo QR).\n- Listar parques industriales.\n\n> El Tenant **no puede** crear ni modificar destinos. Solo puede leer los que le fueron asignados por el Admin.",
+      "item": [
+        {
+          "name": "Parques Industriales",
+          "description": "# Parques Industriales — Tenant\n\n**Base path:** `GET /api/destinations/parks/`",
+          "item": [
+            {
+              "name": "List Parks",
+              "description": "**GET** `/api/destinations/parks/`\n\nLista todos los parques del sistema. Útil para mostrar el contexto del parque en el frontend.\n\n**Respuesta (200):**\n```json\n[\n  { \"id\": 1, \"name\": \"Parque Industrial Norte\" }\n]\n```",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/destinations/parks/"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Destinos",
+          "description": "# Destinos — Tenant (solo lectura)\n\n**Base path:** `/api/destinations/`\n\nEl Tenant **solo puede leer** los destinos de los que es responsable. No puede crear, editar ni eliminar.\n\nIntentar `POST`, `PATCH` o `DELETE` retornará `403 Forbidden`.",
+          "item": [
+            {
+              "name": "List Destinations (mis destinos)",
+              "description": "**GET** `/api/destinations/`\n\nLista únicamente los destinos donde el tenant autenticado es el `responsible`.\n\n**Respuesta (200):** lista con `park` y `responsible` anidados.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/destinations/"
+              }
+            },
+            {
+              "name": "Get Destination",
+              "description": "**GET** `/api/destinations/{{destination_id}}/`\n\nDetalle de un destino del que el tenant es responsable.\n\n**Errores:** `404` si el destino no existe o no le pertenece.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/destinations/{{destination_id}}/"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pases de Acceso",
+          "description": "# Pases de Acceso — Tenant\n\n**Base path:** `/api/passes/`\n\nEl Tenant gestiona pases exclusivamente para los destinos de los que es responsable.\n\n### ¿Cómo funciona el QR?\n1. El Tenant crea un pase para un visitante → obtiene el `id`.\n2. El frontend genera el QR con ese `id`.\n3. El Guard escanea el QR al llegar el visitante.",
+          "item": [
+            {
+              "name": "List Passes (mis destinos)",
+              "description": "**GET** `/api/passes/`\n\nLista los pases de los destinos de los que el tenant es responsable, ordenados por `created_at` descendente.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/passes/"
+              }
+            },
+            {
+              "name": "Create Pass (destino único - auto asignado)",
+              "description": "**POST** `/api/passes/`\n\nCrea un pase **sin especificar `destination`**. Se asigna automáticamente si el tenant tiene exactamente 1 destino.\n\n**Body:**\n```json\n{\n  \"visitor_name\": \"Juan Pérez\",\n  \"plate\": \"ABC-1234\",\n  \"pass_type\": \"day\",\n  \"valid_from\": \"2026-03-17T08:00:00Z\",\n  \"valid_to\": \"2026-03-17T18:00:00Z\"\n}\n```\n\n**El `id` de la respuesta es el valor para generar el QR.**\n\n**Errores:** `400` si tiene más de un destino y no especificó cuál.\n\n**Script:** guarda `pass_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('pass_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"visitor_name\": \"Juan Pérez\",\n  \"plate\": \"ABC-1234\",\n  \"pass_type\": \"day\",\n  \"valid_from\": \"2026-03-17T08:00:00Z\",\n  \"valid_to\": \"2026-03-17T18:00:00Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Create Pass (seleccionar destino)",
+              "description": "**POST** `/api/passes/`\n\nCrea un pase especificando el destino. Usar cuando el tenant tiene más de un destino asignado.\n\n**Body:**\n```json\n{\n  \"destination\": 1,\n  \"visitor_name\": \"Ana Torres\",\n  \"plate\": \"XYZ-5678\",\n  \"pass_type\": \"single\",\n  \"valid_from\": \"2026-03-17T09:00:00Z\",\n  \"valid_to\": \"2026-03-17T12:00:00Z\"\n}\n```\n\n**Validación:** el `destination` debe ser uno de los destinos del tenant.\n\n**Script:** guarda `pass_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('pass_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"destination\": {{destination_id}},\n  \"visitor_name\": \"Ana Torres\",\n  \"plate\": \"XYZ-5678\",\n  \"pass_type\": \"single\",\n  \"valid_from\": \"2026-03-17T09:00:00Z\",\n  \"valid_to\": \"2026-03-17T12:00:00Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get Pass",
+              "description": "**GET** `/api/passes/{{pass_id}}/`\n\nDetalle de un pase de los destinos del tenant.\n\n**Errores:** `404` si no existe o pertenece a un destino ajeno.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/"
+              }
+            },
+            {
+              "name": "Update Pass",
+              "description": "**PATCH** `/api/passes/{{pass_id}}/`\n\nModifica parcialmente un pase. Casos de uso: extender `valid_to`, cambiar `plate`.\n\n**Respuesta (200):** pase actualizado completo.",
+              "request": {
+                "method": "PATCH",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"valid_to\": \"2026-03-17T20:00:00Z\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Deactivate Pass",
+              "description": "**PATCH** `/api/passes/{{pass_id}}/`\n\nDesactiva un pase sin eliminarlo. El QR deja de funcionar pero el historial se preserva.\n\n**Body:**\n```json\n{ \"is_active\": false }\n```",
+              "request": {
+                "method": "PATCH",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"is_active\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Delete Pass",
+              "description": "**DELETE** `/api/passes/{{pass_id}}/`\n\nElimina permanentemente un pase.\n\n**Respuesta:** `204 No Content`",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/api/passes/{{pass_id}}/"
+              }
+            },
+            {
+              "name": "Validate Pass (QR)",
+              "description": "**POST** `/api/passes/validate/`\n\nVerifica si un pase es vigente. El tenant puede usarlo para confirmar el estado de un pase antes de compartirlo.\n\n**Body:**\n```json\n{ \"pass_id\": 1 }\n```\n\n**Respuesta (200):** `{ \"is_valid\": true, ...datos del pase }`\n\n**Respuesta (400):** pase inactivo o expirado.",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/validate/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pass_id\": {{pass_id}}\n}"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Guard",
+      "description": "# Guardia\n\nTodo lo que puede hacer el rol `guard`. Asegúrate de haber ejecutado **Login - Guard** antes de usar estos endpoints.\n\n**Capacidades:**\n- Validar pases de acceso (escaneo QR).\n- Registrar entradas de visitantes (flujo QR o manual).\n- Consultar el historial de accesos de su parque.\n\n> El Guard **no puede** crear usuarios, destinos ni pases. Solo registra y consulta accesos.\n\n---\n\n### Flujo QR\n```\n1. Guard escanea el QR → obtiene el pass_id\n2. [Opcional] Validate Pass → previsualizar datos del visitante\n3. Register Access - QR → sistema transcribe todo del pase automáticamente\n```\n\n### Flujo Manual\n```\n1. Guard ingresa datos del visitante manualmente\n2. Register Access - Manual → visitor_name + plate + destination requeridos\n```",
+      "item": [
+        {
+          "name": "Pases",
+          "description": "# Pases — Guard (solo validación)\n\nEl Guard no crea ni modifica pases. Solo puede validarlos al escanear un QR.",
+          "item": [
+            {
+              "name": "Validate Pass (QR)",
+              "description": "**POST** `/api/passes/validate/`\n\nUsado por el Guard al escanear un código QR. Recibe el `pass_id` decodificado del QR y retorna los datos del pase si es vigente.\n\n**Body:**\n```json\n{ \"pass_id\": 1 }\n```\n\n**Respuesta (200):** pase válido.\n```json\n{\n  \"is_valid\": true,\n  \"id\": 1,\n  \"destination\": { \"id\": 1, \"name\": \"Empresa ABC\", \"type\": \"company\" },\n  \"visitor_name\": \"Juan Pérez\",\n  \"plate\": \"ABC-1234\",\n  \"pass_type\": \"day\",\n  \"valid_from\": \"2026-03-17T08:00:00Z\",\n  \"valid_to\": \"2026-03-17T18:00:00Z\",\n  \"is_active\": true\n}\n```\n\n**Respuesta (400):** `{ \"detail\": \"El pase no es válido o ha expirado.\", \"is_valid\": false }`\n\n**Respuesta (404):** pase no encontrado.\n\n> Después de validar, usar **Register Access - QR** para registrar el acceso.",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/passes/validate/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pass_id\": {{pass_id}}\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registros de Acceso",
+          "description": "# Registros de Acceso — Guard\n\n**Base path:** `/api/access-logs/`\n\nEl Guard registra y consulta los accesos de su parque industrial.",
+          "item": [
+            {
+              "name": "List Access Logs",
+              "description": "**GET** `/api/access-logs/`\n\nLista todos los registros de acceso del parque del guardia, ordenados por `entry_time` descendente.\n\n**Respuesta (200):** lista con `access_pass`, `destination` y `guard` anidados, más `entry_time`, `exit_time` y `status`.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/access-logs/"
+              }
+            },
+            {
+              "name": "Register Access - QR",
+              "description": "**POST** `/api/access-logs/create/`\n\nRegistra un acceso mediante código QR. Solo se envía `access_pass`; el sistema transcribe todo lo demás del pase automáticamente.\n\n**Body mínimo:**\n```json\n{ \"access_pass\": 1 }\n```\n\n**Con nota opcional:**\n```json\n{\n  \"access_pass\": 1,\n  \"notes\": \"Observación adicional\"\n}\n```\n\n**Lo que el sistema hace automáticamente:**\n- Valida que el pase sea vigente y del mismo parque.\n- Transcribe `visitor_name`, `plate` y `destination` del pase.\n- Asigna `guard` desde el perfil del usuario autenticado.\n- Asigna `entry_time` a la hora actual.\n- Establece `access_type: \"qr\"` y `status: \"open\"`.\n\n**Respuesta (201):** `AccessLog` completo con todos los datos anidados.\n\n**Errores:** `400` pase inactivo, expirado o de otro parque. `404` pase no encontrado.\n\n**Script:** guarda `access_log_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('access_log_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/access-logs/create/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"access_pass\": {{pass_id}}\n}"
+                }
+              }
+            },
+            {
+              "name": "Register Access - Manual",
+              "description": "**POST** `/api/access-logs/create/`\n\nRegistra un acceso manualmente cuando el visitante no tiene código QR.\n\n**Body:**\n```json\n{\n  \"destination\": 1,\n  \"visitor_name\": \"Pedro García\",\n  \"plate\": \"DEF-9012\",\n  \"notes\": \"Proveedor de mantenimiento\"\n}\n```\n\n**Campos:**\n\n| Campo | Tipo | Requerido | Descripción |\n|-------|------|-----------|-------------|\n| `destination` | int (ID) | Sí | Destino al que accede. Debe pertenecer al parque del guardia. |\n| `visitor_name` | string | Sí | Nombre del visitante |\n| `plate` | string | Sí | Placa del vehículo |\n| `notes` | string | No | Observaciones |\n| `entry_time` | datetime ISO 8601 | No | Por defecto: hora actual |\n\n**Lo que el sistema hace automáticamente:**\n- Asigna `guard` desde el perfil del usuario autenticado.\n- Establece `access_type: \"manual\"` y `status: \"open\"`.\n\n**Respuesta (201):** `AccessLog` completo.\n\n**Script:** guarda `access_log_id`.",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) pm.environment.set('access_log_id', res.id);"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/api/access-logs/create/",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"destination\": {{destination_id}},\n  \"visitor_name\": \"Pedro García\",\n  \"plate\": \"DEF-9012\",\n  \"notes\": \"Proveedor de mantenimiento\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get Access Log",
+              "description": "**GET** `/api/access-logs/{{access_log_id}}/`\n\nDetalle de un registro de acceso del parque del guardia.\n\n**Respuesta (200):** objeto completo con `access_pass` (null si fue manual), `destination`, `guard`, tiempos y estado.\n\n**Estados:**\n- `open` — Visitante dentro del parque.\n- `closed` — Visitante ya salió.\n\n**Errores:** `404` si no existe o pertenece a otro parque.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/access-logs/{{access_log_id}}/"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
