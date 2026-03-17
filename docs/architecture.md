@@ -19,14 +19,15 @@ Sistema de gestión de accesos para parques industriales. Inquilinos generan pas
 
 ## Estructura de apps
 
-Cuatro apps por dominio — el rol define permisos, no estructura de datos.
+Cinco apps por dominio — el rol define permisos, no estructura de datos.
 
 | App | Modelos | Responsabilidad |
 |---|---|---|
 | `users` | `User` | Autenticación, roles, JWT |
 | `destinations` | `IndustrialPark`, `Destination` | Catálogos del parque |
 | `passes` | `AccessPass` | Generación de pases QR |
-| `access` | `AccessLog` | Registro de entradas/salidas y métricas |
+| `access` | `AccessLog` | Registro de entradas/salidas |
+| `metrics` | — | Analíticas para admin (sin modelos propios) |
 
 ---
 
@@ -83,20 +84,21 @@ Guard escanea QR → valida AccessPass → crea AccessLog
 | Auth | POST | `/auth/login/` | todos |
 | Auth | POST | `/auth/refresh/` | todos |
 | Auth | POST | `/auth/logout/` | todos |
+| Auth | GET | `/auth/me/` | todos |
 | Auth | POST | `/auth/change-password/` | todos |
-| Users | GET/POST | `/users/` | admin |
-| Users | GET/PATCH | `/users/{id}/` | admin |
-| Destinations | GET/POST | `/destinations/` | admin (W), otros (R) |
-| Destinations | GET/PATCH | `/destinations/{id}/` | admin (W), otros (R) |
-| Passes | GET/POST | `/passes/` | tenant (W), admin (R) |
-| Passes | GET | `/passes/{id}/` | tenant (propio), admin |
-| Passes | POST | `/passes/validate/` | guard |
-| AccessLogs | GET/POST | `/access-logs/` | guard (W), admin (R) |
-| AccessLogs | POST | `/access-logs/{id}/exit/` | guard |
-| Metrics | GET | `/metrics/summary/` | admin |
-| Metrics | GET | `/metrics/by-day/` | admin |
-| Metrics | GET | `/metrics/by-hour/` | admin |
-| Metrics | GET | `/metrics/top-destinations/` | admin |
+| Users | GET/POST | `/api/users/` | admin |
+| Parks | GET | `/api/destinations/parks/` | admin, tenant, guard |
+| Destinations | GET/POST | `/api/destinations/` | admin (W), admin/tenant/guard (R) |
+| Destinations | GET/PATCH/DELETE | `/api/destinations/{id}/` | admin (W), admin/tenant/guard (R) |
+| Passes | GET/POST | `/api/passes/` | admin/tenant (W), admin/tenant (R) |
+| Passes | GET/PATCH/DELETE | `/api/passes/{id}/` | admin/tenant |
+| Passes | POST | `/api/passes/validate/` | todos |
+| AccessLogs | GET | `/api/access-logs/` | guard |
+| AccessLogs | POST | `/api/access-logs/create/` | guard |
+| AccessLogs | GET/PATCH | `/api/access-logs/{id}/` | guard |
+| Metrics | GET | `/api/metrics/dashboard/` | admin |
+| Metrics | GET | `/api/metrics/access-logs/` | admin |
+| Metrics | GET | `/api/metrics/passes/` | admin |
 
 ---
 
@@ -117,24 +119,4 @@ Destination (1) ──< AccessLog (M)    ← desnormalizado
 User(guard) (1) ──< AccessLog (M)
 ```
 
----
-
-## Estado actual de implementación
-
-| Modelo | Estado |
-|---|---|
-| `IndustrialPark` | Implementado |
-| `User` | Implementado |
-| `Destination` | Implementado |
-| `AccessPass` | Pendiente |
-| `AccessLog` | Pendiente |
-
-| Endpoint | Estado |
-|---|---|
-| `POST /auth/login/` | Implementado |
-| `POST /auth/refresh/` | Implementado |
-| `POST /auth/logout/` | Implementado |
-| `GET /auth/me/` | Implementado |
-| `POST /auth/change-password/` | Implementado |
-| `GET/POST /users/` | Implementado |
-| Resto | Pendiente |
+Ver [`docs/api.md`](api.md) para la referencia completa de endpoints.
