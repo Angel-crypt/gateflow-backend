@@ -29,4 +29,5 @@ urlpatterns = [
     path("api/access-logs/", AccessLogListView.as_view()),
     path("api/access-logs/create/", AccessLogCreateView.as_view()),
     path("api/access-logs/<int:pk>/", AccessLogDetailView.as_view()),
+    path("api/metrics/", include("apps.metrics.urls")),
 ]
