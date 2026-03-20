@@ -1,6 +1,6 @@
 import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient 
+from rest_framework.test import APIClient
 
 from apps.access.models import AccessLog
 from apps.destinations.models import Destination, IndustrialPark
@@ -35,7 +35,7 @@ def admin(park):
 
 @pytest.fixture
 def company(park, destination):
-    user = User.objects.create_user(email="company@park.com", password="pass1234", role="company", park=park)
+    user = User.objects.create_user(email="tenant@park.com", password="pass1234", role="tenant", park=park)
     user.destinations.set([destination])
     return user
 
