@@ -1,6 +1,6 @@
 import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient 
 
 from apps.access.models import AccessLog
 from apps.destinations.models import Destination, IndustrialPark
