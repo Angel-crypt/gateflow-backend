@@ -84,31 +84,49 @@ class AccessPassDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class AccessPassValidateView(APIView):
     """
-    Validar un pase de acceso por ID. Cualquier usuario autenticado.
+    Validar un pase de acceso por QR. Solo Guard.
 
-    Usado por el guardia al escanear un código QR. Recibe el `pass_id` y retorna
+    Usado por el guardia al escanear un código QR. Recibe el `qr_code` y retorna
     los datos completos del pase si es válido (activo y dentro del rango de fechas).
 
-    Retorna 400 si el pase está inactivo o fuera del rango de validez.
-    Retorna 404 si el pase no existe.
+    Retorna 400 si el pase está inactivo, expirado o ya fue usado (Single Use).
+    Retorna 404 si el pase no existe o es de otro parque.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
-        pass_id = request.data.get("pass_id")
-        if not pass_id:
-            return Response({"detail": "El campo pass_id es requerido."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            access_pass = AccessPass.objects.get(id=int(pass_id))
-        except AccessPass.DoesNotExist:
-            return Response({"detail": "Pase no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-
-        if not access_pass.is_valid():
+        qr_code = request.data.get("qr_code")
+        if not qr_code:
             return Response(
-                {"detail": "El pase no es válido o ha expirado.", "is_valid": False},
+                {"detail": "El campo qr_code es requerido."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response({"is_valid": True, **AccessPassSerializer(access_pass, context={"request": request}).data})
+        try:
+            access_pass = AccessPass.objects.get(
+                qr_code=qr_code,
+                destination__park=request.user.park,
+            )
+        except AccessPass.DoesNotExist:
+            return Response(
+                {"detail": "Pase no encontrado.", "error": "NOT_FOUND"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not access_pass.is_valid():
+            if access_pass.pass_type == AccessPass.PassType.SINGLE and access_pass.is_used:
+                return Response(
+                    {"detail": "Pase ya utilizado.", "error": "ALREADY_USED"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response(
+                {"detail": "El pase no es válido o ha expirado.", "error": "EXPIRED"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        access_pass.consume()
+
+        return Response(
+            {"is_valid": True, **AccessPassSerializer(access_pass, context={"request": request}).data}
+        )
