@@ -2,7 +2,8 @@ from rest_framework import generics
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from apps.users.permissions import IsGuard
+from apps.users.models import User
+from apps.users.permissions import IsAdmin, IsGuard
 
 from .models import AccessLog
 from .serializers import AccessLogCreateSerializer, AccessLogSerializer
@@ -10,14 +11,16 @@ from .serializers import AccessLogCreateSerializer, AccessLogSerializer
 
 class AccessLogListView(generics.ListAPIView):
     """
-    Listar registros de acceso del parque. Solo Guard.
+    Listar registros de acceso del parque. Guard y Admin.
 
     Retorna todos los registros de entrada/salida correspondientes
-    al parque industrial del guardia autenticado, ordenados por `entry_time` descendente.
+    al parque industrial del usuario autenticado, ordenados por `entry_time` descendente.
     """
 
-    permission_classes = [IsGuard]
     serializer_class = AccessLogSerializer
+
+    def get_permissions(self):
+        return [IsGuard() if self.request.user.role == User.Role.GUARD else IsAdmin()]
 
     def get_queryset(self):
         return AccessLog.objects.filter(destination__park=self.request.user.park)
@@ -52,15 +55,17 @@ class AccessLogCreateView(generics.CreateAPIView):
 
 class AccessLogDetailView(generics.RetrieveAPIView):
     """
-    Detalle de un registro de acceso. Solo Guard.
+    Detalle de un registro de acceso. Guard y Admin.
 
     Retorna el registro completo con datos del pase asociado (si aplica),
     destino, guardia que registró, tiempos de entrada/salida y estado.
-    Solo accede a registros del parque del guardia autenticado.
+    Solo accede a registros del parque del usuario autenticado.
     """
 
-    permission_classes = [IsGuard]
     serializer_class = AccessLogSerializer
+
+    def get_permissions(self):
+        return [IsGuard() if self.request.user.role == User.Role.GUARD else IsAdmin()]
 
     def get_queryset(self):
         return AccessLog.objects.filter(destination__park=self.request.user.park)
