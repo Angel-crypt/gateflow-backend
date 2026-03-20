@@ -150,3 +150,78 @@ def test_retrieve_company_other_pass_returns_404(company, admin, destination):
     ap = make_pass(destination, admin)
     response = auth_client(company).get(f"{URL}{ap.id}/")
     assert response.status_code == 404
+
+    # ── POST /api/passes/ ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_create_admin_returns_201(admin, destination):
+    now = timezone.now()
+    payload = {
+        "destination": destination.id,
+        "visitor_name": "María López",
+        "pass_type": "day",
+        "valid_from": (now - timezone.timedelta(hours=1)).isoformat(),
+        "valid_to": (now + timezone.timedelta(hours=8)).isoformat(),
+    }
+    response = auth_client(admin).post(URL, payload)
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_create_guard_forbidden(guard, destination):
+    now = timezone.now()
+    payload = {
+        "destination": destination.id,
+        "visitor_name": "María López",
+        "pass_type": "day",
+        "valid_from": (now - timezone.timedelta(hours=1)).isoformat(),
+        "valid_to": (now + timezone.timedelta(hours=8)).isoformat(),
+    }
+    response = auth_client(guard).post(URL, payload)
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_create_unauthenticated_returns_401():
+    response = APIClient().post(URL, {})
+    assert response.status_code == 401
+
+
+# ── POST /api/passes/validate/ ────
+
+
+@pytest.mark.django_db
+def test_validate_valid_pass_returns_200(guard, company, destination):
+    ap = make_pass(destination, company)
+    response = auth_client(guard).post(VALIDATE_URL, {"qr_code": str(ap.qr_code)})
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_validate_single_use_consumed_after_scan(guard, company, destination):
+    ap = make_pass(destination, company, pass_type="single")
+    auth_client(guard).post(VALIDATE_URL, {"qr_code": str(ap.qr_code)})
+    ap.refresh_from_db()
+    assert ap.is_used is True
+
+
+@pytest.mark.django_db
+def test_validate_already_used_returns_400(guard, company, destination):
+    ap = make_pass(destination, company, pass_type="single", is_used=True)
+    response = auth_client(guard).post(VALIDATE_URL, {"qr_code": str(ap.qr_code)})
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_validate_admin_forbidden(admin, company, destination):
+    ap = make_pass(destination, company)
+    response = auth_client(admin).post(VALIDATE_URL, {"qr_code": str(ap.qr_code)})
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_validate_unauthenticated_returns_401(company, destination):
+    ap = make_pass(destination, company)
+    response = APIClient().post(VALIDATE_URL, {"qr_code": str(ap.qr_code)})
+    assert response.status_code == 401
