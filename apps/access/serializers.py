@@ -80,14 +80,25 @@ class AccessLogCreateSerializer(serializers.ModelSerializer):
                 park=request.user.park, is_active=True
             )
 
+    def _validate_no_open_access(self, plate: str, park) -> None:
+        """RNF-05: Impide dos accesos OPEN simultáneos para la misma placa en el mismo parque."""
+        if plate and AccessLog.objects.filter(
+            plate=plate,
+            status=AccessLog.Status.OPEN,
+            destination__park=park,
+        ).exists():
+            raise serializers.ValidationError(
+                {"plate": "Ya existe un acceso abierto para esta placa en el parque (RNF-05)."}
+            )
+
     def validate(self, attrs: dict) -> dict:
         access_pass: AccessPass | None = attrs.get("access_pass")
+        guard: User = self.context["request"].user  # type: ignore[assignment]
 
         if access_pass:
             if not access_pass.is_valid():
                 raise serializers.ValidationError({"access_pass": "El pase no es válido o ha expirado."})
 
-            guard: User = self.context["request"].user  # type: ignore[assignment]
             if access_pass.destination.park != guard.park:
                 raise serializers.ValidationError({"access_pass": "El pase no pertenece a este parque."})
 
@@ -105,6 +116,9 @@ class AccessLogCreateSerializer(serializers.ModelSerializer):
                 errors["destination"] = "Requerido para acceso manual."
             if errors:
                 raise serializers.ValidationError(errors)
+
+        # RNF-05: validar duplicados después de que plate y park estén definidos
+        self._validate_no_open_access(attrs.get("plate", ""), guard.park)
 
         return attrs
 
