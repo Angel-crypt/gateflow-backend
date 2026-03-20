@@ -1,11 +1,10 @@
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import User
-from apps.users.permissions import IsAdminOrTenant
+from apps.users.permissions import IsAdminOrTenant, IsGuard
 
 from .models import AccessPass
 from .serializers import AccessPassSerializer, AccessPassWriteSerializer
@@ -93,7 +92,7 @@ class AccessPassValidateView(APIView):
     Retorna 404 si el pase no existe o es de otro parque.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsGuard]
 
     def post(self, request: Request) -> Response:
         qr_code = request.data.get("qr_code")
