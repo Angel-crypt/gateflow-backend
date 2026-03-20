@@ -45,14 +45,14 @@ def guard(park):
 
 @pytest.fixture
 def company(park, destination):
-    user = User.objects.create_user(email="company@park.com", password="pass1234", role="company", park=park)
+    user = User.objects.create_user(email="tenant@park.com", password="pass1234", role="tenant", park=park)
     user.destinations.set([destination])
     return user
 
 
 @pytest.fixture
 def other_company(other_park, other_destination):
-    user = User.objects.create_user(email="company@other.com", password="pass1234", role="company", park=other_park)
+    user = User.objects.create_user(email="tenant@other.com", password="pass1234", role="tenant", park=other_park)
     user.destinations.set([other_destination])
     return user
 
@@ -102,7 +102,8 @@ def test_is_valid_single_use_already_used(destination, company):
     ap = make_pass(destination, company, pass_type="single", is_used=True)
     assert ap.is_valid() is False
 
-    # ── GET /api/passes/ ──────────────────────────────────────────────────────────
+
+# ── GET /api/passes/ ──────────────────────────────────────────────────────────
 
 
 @pytest.mark.django_db
@@ -151,7 +152,8 @@ def test_retrieve_company_other_pass_returns_404(company, admin, destination):
     response = auth_client(company).get(f"{URL}{ap.id}/")
     assert response.status_code == 404
 
-    # ── POST /api/passes/ ─────────────────────────────────────────────────────────
+
+# ── POST /api/passes/ ─────────────────────────────────────────────────────────
 
 
 @pytest.mark.django_db
