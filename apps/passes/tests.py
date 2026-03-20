@@ -101,3 +101,52 @@ def test_is_valid_inactive_pass(destination, company):
 def test_is_valid_single_use_already_used(destination, company):
     ap = make_pass(destination, company, pass_type="single", is_used=True)
     assert ap.is_valid() is False
+
+    # ── GET /api/passes/ ──────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_list_admin_returns_200(admin, company, destination):
+    make_pass(destination, company)
+    response = auth_client(admin).get(URL)
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_list_company_sees_only_own_passes(company, admin, destination):
+    own = make_pass(destination, company)
+    make_pass(destination, admin)
+    response = auth_client(company).get(URL)
+    ids = [p["id"] for p in response.data["results"]]
+    assert own.id in ids
+    assert len(ids) == 1
+
+
+@pytest.mark.django_db
+def test_list_unauthenticated_returns_401():
+    response = APIClient().get(URL)
+    assert response.status_code == 401
+
+
+# ── GET /api/passes/{id}/ ───
+
+
+@pytest.mark.django_db
+def test_retrieve_admin_returns_200(admin, company, destination):
+    ap = make_pass(destination, company)
+    response = auth_client(admin).get(f"{URL}{ap.id}/")
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_retrieve_company_own_pass_returns_200(company, destination):
+    ap = make_pass(destination, company)
+    response = auth_client(company).get(f"{URL}{ap.id}/")
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_retrieve_company_other_pass_returns_404(company, admin, destination):
+    ap = make_pass(destination, admin)
+    response = auth_client(company).get(f"{URL}{ap.id}/")
+    assert response.status_code == 404
