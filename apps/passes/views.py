@@ -1,8 +1,11 @@
+from django.db import transaction
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.access.models import AccessLog
 from apps.users.models import User
 from apps.users.permissions import IsAdminOrTenant, IsGuard
 
@@ -85,8 +88,8 @@ class AccessPassValidateView(APIView):
     """
     Validar un pase de acceso por QR. Solo Guard.
 
-    Usado por el guardia al escanear un código QR. Recibe el `qr_code` y retorna
-    los datos completos del pase si es válido (activo y dentro del rango de fechas).
+    Usado por el guardia al escanear un código QR. Recibe el `qr_code`,
+    valida el pase y genera automáticamente un AccessLog de entrada.
 
     Retorna 400 si el pase está inactivo, expirado o ya fue usado (Single Use).
     Retorna 404 si el pase no existe o es de otro parque.
@@ -124,8 +127,22 @@ class AccessPassValidateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        access_pass.consume()
+        with transaction.atomic():
+            access_pass.consume()
+            log = AccessLog.objects.create(
+                access_pass=access_pass,
+                destination=access_pass.destination,
+                guard=request.user,
+                visitor_name=access_pass.visitor_name,
+                plate=access_pass.plate,
+                access_type=AccessLog.AccessType.QR,
+                entry_time=timezone.now(),
+            )
 
         return Response(
-            {"is_valid": True, **AccessPassSerializer(access_pass, context={"request": request}).data}
+            {
+                "is_valid": True,
+                "access_log_id": log.id,
+                **AccessPassSerializer(access_pass, context={"request": request}).data,
+            }
         )
