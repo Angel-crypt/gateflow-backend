@@ -10,7 +10,7 @@ URL = "/api/passes/"
 VALIDATE_URL = "/api/passes/validate/"
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# ── Fixtures ───
 
 
 @pytest.fixture
@@ -75,3 +75,29 @@ def auth_client(user):
     client = APIClient()
     client.force_authenticate(user=user)
     return client
+
+
+# ── Model ─────
+
+
+@pytest.mark.django_db
+def test_access_pass_model_exists():
+    assert AccessPass is not None
+
+
+@pytest.mark.django_db
+def test_is_valid_active_pass(destination, company):
+    ap = make_pass(destination, company)
+    assert ap.is_valid() is True
+
+
+@pytest.mark.django_db
+def test_is_valid_inactive_pass(destination, company):
+    ap = make_pass(destination, company, is_active=False)
+    assert ap.is_valid() is False
+
+
+@pytest.mark.django_db
+def test_is_valid_single_use_already_used(destination, company):
+    ap = make_pass(destination, company, pass_type="single", is_used=True)
+    assert ap.is_valid() is False
