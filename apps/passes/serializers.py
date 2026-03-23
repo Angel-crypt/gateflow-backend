@@ -36,6 +36,7 @@ class AccessPassSerializer(serializers.ModelSerializer):
             "valid_from",
             "valid_to",
             "is_active",
+            "is_used",
             "created_at",
         ]
 
