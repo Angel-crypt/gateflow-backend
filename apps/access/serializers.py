@@ -112,4 +112,10 @@ class AccessLogCreateSerializer(serializers.ModelSerializer):
         access_pass = validated_data.get("access_pass")
         validated_data.setdefault("entry_time", timezone.now())
         validated_data["access_type"] = AccessLog.AccessType.QR if access_pass else AccessLog.AccessType.MANUAL
-        return AccessLog.objects.create(guard=self.context["request"].user, **validated_data)
+        log = AccessLog.objects.create(guard=self.context["request"].user, **validated_data)
+
+        if access_pass and access_pass.pass_type == AccessPass.PassType.SINGLE:
+            access_pass.is_used = True
+            access_pass.save(update_fields=["is_used", "updated_at"])
+
+        return log
