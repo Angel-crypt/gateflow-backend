@@ -6,6 +6,7 @@ from apps.access.views import (
     AccessLogCreateView,
     AccessLogDetailView,
     AccessLogListView,
+    RegisterExitView,
 )
 from apps.passes.views import (
     AccessPassDetailView,
@@ -29,5 +30,6 @@ urlpatterns = [
     path("api/access-logs/", AccessLogListView.as_view()),
     path("api/access-logs/create/", AccessLogCreateView.as_view()),
     path("api/access-logs/<int:pk>/", AccessLogDetailView.as_view()),
+    path("api/access-logs/<int:pk>/register-exit/", RegisterExitView.as_view()),
     path("api/metrics/", include("apps.metrics.urls")),
 ]
