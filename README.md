@@ -123,7 +123,42 @@ uv run manage.py createsuperuser
 
 ---
 
-## 7. Iniciar el servidor de desarrollo
+## 7. Cargar datos iniciales (seed)
+
+Crea un parque industrial, usuarios de prueba, destinos, pases y registros de acceso.
+Es **idempotente**: ejecutarlo varias veces no duplica datos.
+
+```bash
+# Carga completa
+uv run manage.py seed
+
+# Resetear y recargar (elimina datos del seed previo)
+uv run manage.py seed --flush
+
+# Solo una sección
+uv run manage.py seed --only users
+uv run manage.py seed --only passes
+uv run manage.py seed --only logs
+
+# Contraseña personalizada para todos los usuarios creados
+uv run manage.py seed --password MiPassword123
+```
+
+El seed imprime las credenciales de los usuarios creados. Por defecto:
+
+| Rol | Email | Contraseña |
+|---|---|---|
+| Admin | `admin@gateflow.mx` | `Admin1234!` |
+| Guardia | `guardia1@gateflow.mx` | `Guard1234!` |
+| Guardia | `guardia2@gateflow.mx` | `Guard1234!` |
+| Inquilino | `inquilino1@acerosnorte.mx` | `Tenant1234!` |
+| Inquilino | `inquilino2@techparts.mx` | `Tenant1234!` |
+
+> El seed funciona en cualquier entorno (`dev` con SQLite3 o `prod` con PostgreSQL).
+
+---
+
+## 9. Iniciar el servidor de desarrollo
 
 ```bash
 uv run manage.py runserver
@@ -180,6 +215,8 @@ uv run pytest -v
 | `uv add <pkg>` | Agregar nueva dependencia |
 | `uv run manage.py migrate` | Aplicar migraciones |
 | `uv run manage.py createsuperuser` | Crear superusuario |
+| `uv run manage.py seed` | Cargar datos iniciales |
+| `uv run manage.py seed --flush` | Resetear y recargar seed |
 | `uv run manage.py runserver` | Iniciar servidor |
 | `uv run pytest` | Correr tests |
 | `docker compose up -d` | Levantar PostgreSQL |

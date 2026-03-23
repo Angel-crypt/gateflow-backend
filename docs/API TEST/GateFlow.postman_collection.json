@@ -461,6 +461,45 @@
               }
             }
           ]
+        },
+        {
+          "name": "Métricas",
+          "description": "# Métricas — Admin\n\n**Base path:** `/api/metrics/`\n\nEndpoints de analítica y métricas del parque. Solo el Admin puede acceder. Todos los datos están filtrados al parque del admin autenticado.",
+          "item": [
+            {
+              "name": "Dashboard",
+              "description": "**GET** `/api/metrics/dashboard/`\n\nResumen general del estado actual del parque industrial.\n\n**Respuesta (200):**\n```json\n{\n  \"park\": { \"id\": 1, \"name\": \"Parque Industrial Norte\" },\n  \"users\": {\n    \"total\": 10,\n    \"guards\": 4,\n    \"tenants\": 6\n  },\n  \"destinations\": {\n    \"total\": 5,\n    \"active\": 4,\n    \"inactive\": 1\n  },\n  \"passes\": {\n    \"total\": 50,\n    \"active\": 12,\n    \"upcoming\": 3,\n    \"expired\": 35,\n    \"deactivated\": 3\n  },\n  \"access_logs\": {\n    \"total\": 200,\n    \"today\": 15,\n    \"open_now\": 3,\n    \"by_type\": { \"qr\": 120, \"manual\": 80 }\n  }\n}\n```\n\n**Estados de pases:**\n- `active` — vigente ahora (`is_active=true` y dentro del rango de fechas)\n- `upcoming` — aún no inicia (`is_active=true` y `valid_from` en el futuro)\n- `expired` — `valid_to` ya pasó\n- `deactivated` — desactivado manualmente\n\n**`open_now`** — visitantes que están físicamente dentro del parque en este momento.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/metrics/dashboard/"
+              }
+            },
+            {
+              "name": "Access Log Analytics",
+              "description": "**GET** `/api/metrics/access-logs/?period=week`\n\nAnalíticas de registros de acceso para el periodo indicado.\n\n**Query params:**\n\n| Param | Valores | Por defecto |\n|-------|---------|-------------|\n| `period` | `today` \\| `week` \\| `month` | `week` |\n\n**Respuesta (200):**\n```json\n{\n  \"period\": \"week\",\n  \"total\": 45,\n  \"open_now\": 3,\n  \"by_type\": { \"qr\": 35, \"manual\": 10 },\n  \"by_destination\": [\n    { \"destination\": \"Empresa ABC\", \"count\": 25 },\n    { \"destination\": \"Área Logística\", \"count\": 20 }\n  ],\n  \"by_day\": [\n    { \"date\": \"2026-03-10\", \"count\": 5 },\n    { \"date\": \"2026-03-11\", \"count\": 8 }\n  ]\n}\n```\n\n- `by_destination` — ordenado por mayor número de accesos.\n- `by_day` — evolución diaria del periodo, ordenado cronológicamente.\n- `open_now` — visitantes actualmente dentro del parque (sin filtro de periodo).",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/metrics/access-logs/?period=week",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "metrics", "access-logs", ""],
+                  "query": [
+                    { "key": "period", "value": "week" },
+                    { "key": "period", "value": "today", "disabled": true },
+                    { "key": "period", "value": "month", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Pass Analytics",
+              "description": "**GET** `/api/metrics/passes/`\n\nAnalíticas de pases de acceso del parque.\n\n**Respuesta (200):**\n```json\n{\n  \"total\": 50,\n  \"active\": 12,\n  \"upcoming\": 3,\n  \"expired\": 35,\n  \"deactivated\": 3,\n  \"by_type\": {\n    \"day\": 40,\n    \"single\": 10\n  },\n  \"by_destination\": [\n    { \"destination\": \"Empresa ABC\", \"count\": 30 },\n    { \"destination\": \"Área Logística\", \"count\": 20 }\n  ]\n}\n```\n\n- `by_type` — distribución entre pases de día (`day`) y de uso único (`single`).\n- `by_destination` — número de pases totales por destino, ordenado descendente.",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/api/metrics/passes/"
+              }
+            }
+          ]
         }
       ]
     },

@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.destinations.apps.DestinationsConfig",
     "apps.passes.apps.PassesConfig",
     "apps.access.apps.AccessConfig",
+    "apps.metrics.apps.MetricsConfig",
 ]
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
