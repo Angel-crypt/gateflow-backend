@@ -27,10 +27,17 @@ class DashboardMetricsView(APIView):
 
     def get(self, request: Request) -> Response:
         park = request.user.park  # type: ignore[union-attr]
+
+        if park is None:
+            return Response(
+                {"detail": "Este usuario no tiene un parque industrial asignado."},
+                status=400,
+            )
+
         now = timezone.now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        park_id: int = park.id  # type: ignore[union-attr]
-        park_name: str = park.name  # type: ignore[union-attr]
+        park_id: int = park.id
+        park_name: str = park.name
 
         users_qs = User.objects.filter(park=park, is_superuser=False)
         dest_qs = Destination.objects.filter(park=park)
