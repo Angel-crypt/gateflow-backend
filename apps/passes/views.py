@@ -96,18 +96,53 @@ class AccessPassValidateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
+        from django.utils import timezone
+
         pass_id = request.data.get("pass_id")
         if not pass_id:
             return Response({"detail": "El campo pass_id es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             access_pass = AccessPass.objects.get(id=int(pass_id))
-        except AccessPass.DoesNotExist:
-            return Response({"detail": "Pase no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-
-        if not access_pass.is_valid():
+        except (AccessPass.DoesNotExist, ValueError):
             return Response(
-                {"detail": "El pase no es válido o ha expirado.", "is_valid": False},
+                {"detail": "Pase no encontrado.", "error_code": "not_found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        now = timezone.now()
+
+        if access_pass.is_used:
+            return Response(
+                {"detail": "Este pase de uso único ya fue utilizado.", "error_code": "already_used", "is_valid": False},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not access_pass.is_active:
+            return Response(
+                {"detail": "El pase está desactivado.", "error_code": "inactive", "is_valid": False},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if now < access_pass.valid_from:
+            valid_from_str = access_pass.valid_from.strftime("%d/%m/%Y %H:%M")
+            return Response(
+                {
+                    "detail": f"El pase aún no es válido. Será válido a partir del {valid_from_str}.",
+                    "error_code": "not_yet_valid",
+                    "is_valid": False,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if now > access_pass.valid_to:
+            valid_to_str = access_pass.valid_to.strftime("%d/%m/%Y %H:%M")
+            return Response(
+                {
+                    "detail": f"El pase expiró el {valid_to_str}.",
+                    "error_code": "expired",
+                    "is_valid": False,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
