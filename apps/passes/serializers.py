@@ -44,8 +44,6 @@ class AccessPassSerializer(serializers.ModelSerializer):
 class AccessPassWriteSerializer(serializers.ModelSerializer):
     destination = serializers.PrimaryKeyRelatedField(
         queryset=Destination.objects.none(),
-        required=False,
-        allow_null=True,
     )
 
     class Meta:
@@ -63,22 +61,7 @@ class AccessPassWriteSerializer(serializers.ModelSerializer):
                 qs = Destination.objects.filter(park=user.park, is_active=True)
             self.fields["destination"].queryset = qs  # type: ignore[union-attr, attr-defined]
 
-    def _get_user_destinations(self, user: User):  # type: ignore[return]
-        if user.role == User.Role.TENANT:
-            return Destination.objects.filter(responsible=user, is_active=True)
-        return Destination.objects.filter(park=user.park, is_active=True)
-
     def validate(self, attrs: dict) -> dict:
-        user: User = self.context["request"].user  # type: ignore[assignment]
-
-        # Auto-assign destination on create if not provided
-        if not self.instance and not attrs.get("destination"):
-            destinations = self._get_user_destinations(user)
-            if destinations.count() == 1:
-                attrs["destination"] = destinations.first()
-            else:
-                raise serializers.ValidationError({"destination": "Debes seleccionar un destino."})
-
         valid_from = attrs.get("valid_from") or (self.instance.valid_from if self.instance else None)
         valid_to = attrs.get("valid_to") or (self.instance.valid_to if self.instance else None)
         if valid_from and valid_to and valid_to <= valid_from:
