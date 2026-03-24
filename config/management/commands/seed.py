@@ -21,7 +21,7 @@ Advertencia --flush en producción:
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand, CommandError
@@ -34,39 +34,39 @@ from apps.passes.models import AccessPass
 from apps.users.models import User
 
 # ── Credenciales por defecto (override vía --password) ────────────────────────
-DEFAULT_ADMIN_PASSWORD  = "Admin1234!"
-DEFAULT_GUARD_PASSWORD  = "Guard1234!"
-DEFAULT_TENANT_PASSWORD = "Tenant1234!"
+DEFAULT_ADMIN_PASSWORD = "Bajio2026!"
+DEFAULT_GUARD_PASSWORD = "Seguridad6!"
+DEFAULT_TENANT_PASSWORD = "Parque2026!"
 
 # ── Datos estáticos del seed ───────────────────────────────────────────────────
 
 PARK = {
-    "name":    "Parque Industrial Bajío",
+    "name": "Parque Industrial Bajío",
     "address": "Carr. Silao–León Km 4.5, Silao de la Victoria, Gto.",
 }
 
 ADMIN = {
-    "email":      "admin@gateflow.mx",
+    "email": "admin@gateflow.mx",
     "first_name": "Carlos",
-    "last_name":  "Mendoza",
-    "role":       User.Role.ADMIN,
+    "last_name": "Mendoza",
+    "role": User.Role.ADMIN,
 }
 
 DESTINATIONS = [
     {"name": "Aceros del Norte S.A. de C.V.", "type": Destination.Type.COMPANY},
-    {"name": "TechParts México",              "type": Destination.Type.COMPANY},
-    {"name": "Almacén Central",               "type": Destination.Type.AREA},
-    {"name": "Patio de Maniobras",            "type": Destination.Type.AREA},
+    {"name": "TechParts México", "type": Destination.Type.COMPANY},
+    {"name": "Almacén Central", "type": Destination.Type.AREA},
+    {"name": "Patio de Maniobras", "type": Destination.Type.AREA},
 ]
 
 GUARDS = [
-    {"email": "guardia1@gateflow.mx", "first_name": "Luis",    "last_name": "Torres"},
-    {"email": "guardia2@gateflow.mx", "first_name": "Ana",     "last_name": "Ramírez"},
+    {"email": "guardia1@gateflow.mx", "first_name": "Luis", "last_name": "Torres"},
+    {"email": "guardia2@gateflow.mx", "first_name": "Ana", "last_name": "Ramírez"},
 ]
 
 TENANTS = [
     {"email": "inquilino1@acerosnorte.mx", "first_name": "Roberto", "last_name": "Sánchez"},
-    {"email": "inquilino2@techparts.mx",   "first_name": "Valeria", "last_name": "Cruz"},
+    {"email": "inquilino2@techparts.mx", "first_name": "Valeria", "last_name": "Cruz"},
 ]
 
 # ── Pass / log templates (relativos a timezone.now()) ────────────────────────
@@ -74,7 +74,7 @@ TENANTS = [
 # Las fechas se calculan dinámicamente en _seed_passes() y _seed_logs()
 # para que siempre sean válidas respecto al momento de ejecución.
 
-NOW = None  # se asigna en handle()
+NOW: datetime = None  # type: ignore[assignment]  # se asigna en handle()
 
 
 class Command(BaseCommand):
@@ -105,12 +105,12 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.MIGRATE_HEADING("\n── GateFlow Seed ────────────────────────────────"))
 
-        only    = options["only"]
-        flush   = options["flush"]
+        only = options["only"]
+        flush = options["flush"]
         pwd_override = options.get("password")
 
-        admin_pwd  = pwd_override or DEFAULT_ADMIN_PASSWORD
-        guard_pwd  = pwd_override or DEFAULT_GUARD_PASSWORD
+        admin_pwd = pwd_override or DEFAULT_ADMIN_PASSWORD
+        guard_pwd = pwd_override or DEFAULT_GUARD_PASSWORD
         tenant_pwd = pwd_override or DEFAULT_TENANT_PASSWORD
 
         try:
@@ -119,15 +119,14 @@ class Command(BaseCommand):
                     self._flush()
 
                 # Siempre se crean parque + destinos (son la base de todo)
-                park         = self._seed_park()
+                park = self._seed_park()
                 destinations = self._seed_destinations(park)
-                guard_user   = self._get_or_create_guard(park, guard_pwd)
+                guard_user = self._get_or_create_guard(park, guard_pwd)
 
                 if only is None or only == "users":
                     self._seed_users(park, admin_pwd, guard_pwd, tenant_pwd)
 
                 if only is None or only == "passes":
-                    tenants = User.objects.filter(park=park, role=User.Role.TENANT)
                     creator = User.objects.filter(park=park, role=User.Role.ADMIN).first()
                     if not creator:
                         raise CommandError("No hay admin en el parque. Ejecuta primero sin --only.")
@@ -191,11 +190,11 @@ class Command(BaseCommand):
             email=guard_data["email"],
             defaults={
                 "first_name": guard_data["first_name"],
-                "last_name":  guard_data["last_name"],
-                "role":       User.Role.GUARD,
-                "park":       park,
-                "password":   make_password(password),
-                "username":   guard_data["email"],
+                "last_name": guard_data["last_name"],
+                "role": User.Role.GUARD,
+                "park": park,
+                "password": make_password(password),
+                "username": guard_data["email"],
             },
         )
         return guard
@@ -208,19 +207,17 @@ class Command(BaseCommand):
             email=ADMIN["email"],
             defaults={
                 "first_name": ADMIN["first_name"],
-                "last_name":  ADMIN["last_name"],
-                "role":       User.Role.ADMIN,
-                "park":       park,
-                "password":   make_password(admin_pwd),
-                "username":   ADMIN["email"],
-                "is_staff":   True,
+                "last_name": ADMIN["last_name"],
+                "role": User.Role.ADMIN,
+                "park": park,
+                "password": make_password(admin_pwd),
+                "username": ADMIN["email"],
+                "is_staff": True,
             },
         )
         self._log("Admin", admin.email, created, indent=4)
         if created:
-            self.stdout.write(self.style.WARNING(
-                f"      → credenciales: {ADMIN['email']} / {admin_pwd}"
-            ))
+            self.stdout.write(self.style.WARNING(f"      → credenciales: {ADMIN['email']} / {admin_pwd}"))
 
         # Guards
         for g in GUARDS:
@@ -228,18 +225,16 @@ class Command(BaseCommand):
                 email=g["email"],
                 defaults={
                     "first_name": g["first_name"],
-                    "last_name":  g["last_name"],
-                    "role":       User.Role.GUARD,
-                    "park":       park,
-                    "password":   make_password(guard_pwd),
-                    "username":   g["email"],
+                    "last_name": g["last_name"],
+                    "role": User.Role.GUARD,
+                    "park": park,
+                    "password": make_password(guard_pwd),
+                    "username": g["email"],
                 },
             )
             self._log("Guardia", user.email, created, indent=4)
             if created:
-                self.stdout.write(self.style.WARNING(
-                    f"      → credenciales: {g['email']} / {guard_pwd}"
-                ))
+                self.stdout.write(self.style.WARNING(f"      → credenciales: {g['email']} / {guard_pwd}"))
 
         # Tenants
         for t in TENANTS:
@@ -247,20 +242,18 @@ class Command(BaseCommand):
                 email=t["email"],
                 defaults={
                     "first_name": t["first_name"],
-                    "last_name":  t["last_name"],
-                    "role":       User.Role.TENANT,
-                    "park":       park,
-                    "password":   make_password(tenant_pwd),
-                    "username":   t["email"],
+                    "last_name": t["last_name"],
+                    "role": User.Role.TENANT,
+                    "park": park,
+                    "password": make_password(tenant_pwd),
+                    "username": t["email"],
                 },
             )
             self._log("Inquilino", user.email, created, indent=4)
             if created:
-                self.stdout.write(self.style.WARNING(
-                    f"      → credenciales: {t['email']} / {tenant_pwd}"
-                ))
+                self.stdout.write(self.style.WARNING(f"      → credenciales: {t['email']} / {tenant_pwd}"))
 
-    # ── Passes ────────────────────────────────────────────────────────────────
+    # ── Passes ───────────────────────────────────────────────────────────────
 
     def _seed_passes(self, destinations: list[Destination], creator: User):
         self.stdout.write("\n  Pases de acceso:")
@@ -274,7 +267,7 @@ class Command(BaseCommand):
                 "destination": dest0,
                 "pass_type": AccessPass.PassType.DAY,
                 "valid_from": NOW - timedelta(hours=2),
-                "valid_to":   NOW + timedelta(hours=22),
+                "valid_to": NOW + timedelta(hours=22),
                 "is_active": True,
             },
             {
@@ -283,7 +276,7 @@ class Command(BaseCommand):
                 "destination": dest1,
                 "pass_type": AccessPass.PassType.DAY,
                 "valid_from": NOW - timedelta(hours=1),
-                "valid_to":   NOW + timedelta(hours=7),
+                "valid_to": NOW + timedelta(hours=7),
                 "is_active": True,
             },
             {
@@ -292,7 +285,7 @@ class Command(BaseCommand):
                 "destination": dest2,
                 "pass_type": AccessPass.PassType.SINGLE,
                 "valid_from": NOW - timedelta(minutes=30),
-                "valid_to":   NOW + timedelta(hours=4),
+                "valid_to": NOW + timedelta(hours=4),
                 "is_active": True,
             },
             # Pase próximo (futuro)
@@ -302,7 +295,7 @@ class Command(BaseCommand):
                 "destination": dest0,
                 "pass_type": AccessPass.PassType.DAY,
                 "valid_from": NOW + timedelta(days=1),
-                "valid_to":   NOW + timedelta(days=1, hours=8),
+                "valid_to": NOW + timedelta(days=1, hours=8),
                 "is_active": True,
             },
             # Pase expirado
@@ -312,7 +305,7 @@ class Command(BaseCommand):
                 "destination": dest1,
                 "pass_type": AccessPass.PassType.DAY,
                 "valid_from": NOW - timedelta(days=3),
-                "valid_to":   NOW - timedelta(days=2),
+                "valid_to": NOW - timedelta(days=2),
                 "is_active": True,
             },
             # Pase desactivado
@@ -322,7 +315,7 @@ class Command(BaseCommand):
                 "destination": dest2,
                 "pass_type": AccessPass.PassType.SINGLE,
                 "valid_from": NOW - timedelta(hours=5),
-                "valid_to":   NOW + timedelta(hours=3),
+                "valid_to": NOW + timedelta(hours=3),
                 "is_active": False,
             },
         ]
@@ -334,10 +327,10 @@ class Command(BaseCommand):
                 destination=p["destination"],
                 defaults={
                     "created_by": creator,
-                    "pass_type":  p["pass_type"],
+                    "pass_type": p["pass_type"],
                     "valid_from": p["valid_from"],
-                    "valid_to":   p["valid_to"],
-                    "is_active":  p["is_active"],
+                    "valid_to": p["valid_to"],
+                    "is_active": p["is_active"],
                 },
             )
             self._log("Pase", f"{obj.visitor_name} / {obj.plate}", created, indent=4)
@@ -355,24 +348,24 @@ class Command(BaseCommand):
                 "plate": "ABC-123",
                 "destination": dest0,
                 "access_type": AccessLog.AccessType.QR,
-                "entry_time":  NOW - timedelta(hours=2),
-                "status":      AccessLog.Status.OPEN,
+                "entry_time": NOW - timedelta(hours=2),
+                "status": AccessLog.Status.OPEN,
             },
             {
                 "visitor_name": "María López",
                 "plate": "XYZ-456",
                 "destination": dest1,
                 "access_type": AccessLog.AccessType.QR,
-                "entry_time":  NOW - timedelta(hours=1, minutes=15),
-                "status":      AccessLog.Status.OPEN,
+                "entry_time": NOW - timedelta(hours=1, minutes=15),
+                "status": AccessLog.Status.OPEN,
             },
             {
                 "visitor_name": "Camión Reparto Bodega",
                 "plate": "DEF-001",
                 "destination": dest2,
                 "access_type": AccessLog.AccessType.MANUAL,
-                "entry_time":  NOW - timedelta(hours=3),
-                "status":      AccessLog.Status.OPEN,
+                "entry_time": NOW - timedelta(hours=3),
+                "status": AccessLog.Status.OPEN,
             },
             # ── ALERTAS: activos con más de 24h dentro del parque ─────────
             # Estos registros son los que deben mostrarse con alerta naranja
@@ -382,24 +375,24 @@ class Command(BaseCommand):
                 "plate": "GHI-200",
                 "destination": dest0,
                 "access_type": AccessLog.AccessType.MANUAL,
-                "entry_time":  NOW - timedelta(hours=26),   # 26h dentro
-                "status":      AccessLog.Status.OPEN,
+                "entry_time": NOW - timedelta(hours=26),  # 26h dentro
+                "status": AccessLog.Status.OPEN,
             },
             {
                 "visitor_name": "Mantenimiento Externo",
                 "plate": "JKL-300",
                 "destination": dest3,
                 "access_type": AccessLog.AccessType.MANUAL,
-                "entry_time":  NOW - timedelta(hours=30),   # 30h dentro
-                "status":      AccessLog.Status.OPEN,
+                "entry_time": NOW - timedelta(hours=30),  # 30h dentro
+                "status": AccessLog.Status.OPEN,
             },
             {
                 "visitor_name": "Trailer Carga Pesada",
                 "plate": "MNO-400",
                 "destination": dest2,
                 "access_type": AccessLog.AccessType.MANUAL,
-                "entry_time":  NOW - timedelta(days=2, hours=3),  # >48h
-                "status":      AccessLog.Status.OPEN,
+                "entry_time": NOW - timedelta(days=2, hours=3),  # >48h
+                "status": AccessLog.Status.OPEN,
             },
             # ── Cerrados recientes ─────────────────────────────────────────
             {
@@ -407,18 +400,18 @@ class Command(BaseCommand):
                 "plate": "LMN-789",
                 "destination": dest2,
                 "access_type": AccessLog.AccessType.QR,
-                "entry_time":  NOW - timedelta(hours=5),
-                "exit_time":   NOW - timedelta(hours=1),
-                "status":      AccessLog.Status.CLOSED,
+                "entry_time": NOW - timedelta(hours=5),
+                "exit_time": NOW - timedelta(hours=1),
+                "status": AccessLog.Status.CLOSED,
             },
             {
                 "visitor_name": "Carlos Visita",
                 "plate": "PQR-500",
                 "destination": dest1,
                 "access_type": AccessLog.AccessType.MANUAL,
-                "entry_time":  NOW - timedelta(hours=8),
-                "exit_time":   NOW - timedelta(hours=4),
-                "status":      AccessLog.Status.CLOSED,
+                "entry_time": NOW - timedelta(hours=8),
+                "exit_time": NOW - timedelta(hours=4),
+                "status": AccessLog.Status.CLOSED,
             },
             # ── Cerrados de días anteriores ────────────────────────────────
             {
@@ -426,42 +419,43 @@ class Command(BaseCommand):
                 "plate": "STU-600",
                 "destination": dest0,
                 "access_type": AccessLog.AccessType.MANUAL,
-                "entry_time":  NOW - timedelta(days=2, hours=4),
-                "exit_time":   NOW - timedelta(days=2, hours=1),
-                "status":      AccessLog.Status.CLOSED,
+                "entry_time": NOW - timedelta(days=2, hours=4),
+                "exit_time": NOW - timedelta(days=2, hours=1),
+                "status": AccessLog.Status.CLOSED,
             },
             {
                 "visitor_name": "Proveedor TechParts",
                 "plate": "VWX-700",
                 "destination": dest1,
                 "access_type": AccessLog.AccessType.QR,
-                "entry_time":  NOW - timedelta(days=3, hours=6),
-                "exit_time":   NOW - timedelta(days=3, hours=2),
-                "status":      AccessLog.Status.CLOSED,
+                "entry_time": NOW - timedelta(days=3, hours=6),
+                "exit_time": NOW - timedelta(days=3, hours=2),
+                "status": AccessLog.Status.CLOSED,
             },
         ]
 
-        for l in logs_data:
+        for log in logs_data:
             defaults = {
-                "guard":       guard,
-                "access_type": l["access_type"],
-                "entry_time":  l["entry_time"],
-                "status":      l["status"],
-                "notes":       "",
+                "guard": guard,
+                "access_type": log["access_type"],
+                "entry_time": log["entry_time"],
+                "status": log["status"],
+                "notes": "",
             }
-            if l.get("exit_time"):
-                defaults["exit_time"] = l["exit_time"]
+            if log.get("exit_time"):
+                defaults["exit_time"] = log["exit_time"]
 
             obj, created = AccessLog.objects.get_or_create(
-                visitor_name=l["visitor_name"],
-                plate=l["plate"],
-                destination=l["destination"],
-                entry_time=l["entry_time"],
+                visitor_name=log["visitor_name"],
+                plate=log["plate"],
+                destination=log["destination"],
+                entry_time=log["entry_time"],
                 defaults=defaults,
             )
             label = f"{obj.visitor_name} / {obj.plate} — {obj.status}"
-            if l["status"] == AccessLog.Status.OPEN:
-                hrs = (NOW - l["entry_time"]).total_seconds() / 3600
+            if log["status"] == AccessLog.Status.OPEN:
+                entry_time = log["entry_time"]  # type: ignore[assignment]
+                hrs = (NOW - entry_time).total_seconds() / 3600  # type: ignore[operator]
                 if hrs >= 24:
                     label += f" ⚠ ({hrs:.0f}h)"
             self._log("Log", label, created, indent=4)
