@@ -456,23 +456,42 @@ class Command(BaseCommand):
         ]
 
         for log in logs_data:
-            defaults = {
-                "guard": guard,
-                "access_type": log["access_type"],
-                "entry_time": log["entry_time"],
-                "status": log["status"],
-                "notes": "",
-            }
-            if log.get("exit_time"):
-                defaults["exit_time"] = log["exit_time"]
-
-            obj, created = AccessLog.objects.get_or_create(
+            # Buscar por visitor_name y plate para evitar duplicados
+            existing = AccessLog.objects.filter(
                 visitor_name=log["visitor_name"],
                 plate=log["plate"],
-                destination=log["destination"],
-                entry_time=log["entry_time"],
-                defaults=defaults,
-            )
+            ).first()
+
+            if existing:
+                # Actualizar si ya existe (para mantener idempotencia con timestamps diferentes)
+                existing.guard = guard
+                existing.destination = log["destination"]
+                existing.access_type = log["access_type"]
+                existing.entry_time = log["entry_time"]
+                existing.status = log["status"]
+                if log.get("exit_time"):
+                    existing.exit_time = log["exit_time"]
+                else:
+                    existing.exit_time = None
+                existing.notes = ""
+                existing.save()
+                obj = existing
+                created = False
+            else:
+                # Crear nuevo registro
+                obj = AccessLog.objects.create(
+                    guard=guard,
+                    destination=log["destination"],
+                    visitor_name=log["visitor_name"],
+                    plate=log["plate"],
+                    access_type=log["access_type"],
+                    entry_time=log["entry_time"],
+                    exit_time=log.get("exit_time"),
+                    status=log["status"],
+                    notes="",
+                )
+                created = True
+
             label = f"{obj.visitor_name} / {obj.plate} — {obj.status}"
             if log["status"] == AccessLog.Status.OPEN:
                 entry_time = log["entry_time"]  # type: ignore[assignment]
