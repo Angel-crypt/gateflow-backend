@@ -6,6 +6,19 @@ Stack: **Python 3.13 · Django 6 · PostgreSQL/SQLite3 · Docker/Podman · uv**
 
 ---
 
+## Capturas de pantalla
+
+| | |
+|:---|:---|
+| ![Dashboard - Admin](docs/SCREENSHOTS/DASHBOARD%20-%20ADMIN.png) | ![Access Management - Admin](docs/SCREENSHOTS/ACCESS%20MANAGEMENT%20-%20ADMIN.png) |
+| **Dashboard Admin** - Métricas del parque | **Access Management** - Registros de acceso |
+| ![Passes Management - Admin](docs/SCREENSHOTS/PASSES%20MANAGMENT%20-%20ADMIN.png) | ![Active Access - Guard](docs/SCREENSHOTS/ACTIVE%20ACCESS%20-%20GUARD.png) |
+| **Passes Management** - Administración de QR | **Active Access** - Visitantes dentro del parque |
+| ![Register QR Access - Guard](docs/SCREENSHOTS/REGISTER%20QR%20ACCESS%20-%20GUARD.png) | ![Register Manual Access - Guard](docs/SCREENSHOTS/REGISTER%20MANUAL%20ACCESS%20-%20GUARD.png) |
+| **Register QR** - Escaneo de código QR | **Register Manual** - Acceso sin QR |
+
+---
+
 ## Requisitos previos
 
 - [`uv`](https://astral.sh/uv) instalado
