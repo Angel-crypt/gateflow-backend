@@ -3,10 +3,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.users.models import User
 from apps.users.permissions import IsAdminOrGuard, IsGuard
 
 from .models import AccessLog
-from .serializers import AccessLogCreateSerializer, AccessLogSerializer
+from .serializers import AccessLogSerializer
 
 
 class AccessLogListView(generics.ListAPIView):
@@ -21,7 +22,23 @@ class AccessLogListView(generics.ListAPIView):
     serializer_class = AccessLogSerializer
 
     def get_queryset(self):
-        return AccessLog.objects.filter(destination__park=self.request.user.park)
+        return AccessLog.objects.filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
+
+
+class AccessLogDetailView(generics.RetrieveAPIView):
+    """
+    Detalle de un registro de acceso. Guard y Admin.
+
+    Retorna los datos completos del registro incluyendo `access_pass`, `destination`, `guard`,
+    tiempos y estado.
+    """
+
+    permission_classes = [IsAdminOrGuard]
+    serializer_class = AccessLogSerializer
+    lookup_url_kwarg = "pk"
+
+    def get_queryset(self):
+        return AccessLog.objects.filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
 
 
 class AccessLogCreateView(generics.CreateAPIView):
@@ -43,28 +60,11 @@ class AccessLogCreateView(generics.CreateAPIView):
     """
 
     permission_classes = [IsGuard]
-
-    def create(self, request: Request, *args, **kwargs) -> Response:
-        serializer = AccessLogCreateSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        log = serializer.save()
-        return Response(AccessLogSerializer(log, context={"request": request}).data, status=201)
-
-
-class AccessLogDetailView(generics.RetrieveAPIView):
-    """
-    Detalle de un registro de acceso. Guard y Admin.
-
-    Retorna el registro completo con datos del pase asociado (si aplica),
-    destino, guardia que registró, tiempos de entrada/salida y estado.
-    Solo accede a registros del parque del usuario autenticado.
-    """
-
-    permission_classes = [IsAdminOrGuard]
     serializer_class = AccessLogSerializer
 
     def get_queryset(self):
-        return AccessLog.objects.filter(destination__park=self.request.user.park)
+        assert isinstance(self.request.user, User)
+        return AccessLog.objects.filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
 
 
 class RegisterExitView(APIView):
@@ -81,8 +81,9 @@ class RegisterExitView(APIView):
     permission_classes = [IsGuard]
 
     def post(self, request: Request, pk: int) -> Response:
+        assert isinstance(request.user, User)
         try:
-            log = AccessLog.objects.get(pk=pk, destination__park=request.user.park)
+            log = AccessLog.objects.get(pk=pk, destination__park=request.user.park)  # type: ignore[union-attr]
         except AccessLog.DoesNotExist:
             return Response({"detail": "Registro no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
