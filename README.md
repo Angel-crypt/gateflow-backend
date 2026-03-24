@@ -72,6 +72,7 @@ SECRET_KEY=unsafe-dev-key
 DEBUG=True
 ALLOWED_HOSTS=*
 DATABASE_URL=sqlite:///db.sqlite3
+CORS_ALLOW_ALL_ORIGINS=True
 ```
 
 No necesitas Docker para desarrollo: SQLite3 funciona sin configuración adicional.
@@ -83,9 +84,10 @@ SECRET_KEY=<genera-una-clave-segura>
 DEBUG=False
 ALLOWED_HOSTS=your-domain.com
 DATABASE_URL=postgres://app_user:app_password@localhost:5432/app_db
+CORS_ALLOWED_ORIGINS=https://tu-dominio-frontend.com
 ```
 
-Ajusta `SECRET_KEY`, `ALLOWED_HOSTS` y la URL de la base de datos a tus valores reales.
+Ajusta `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` y la URL de la base de datos a tus valores reales.
 
 > **Nunca subas `.env`, `.env.dev` ni `.env.prod` al repositorio.** Están en `.gitignore`.
 
@@ -148,11 +150,11 @@ El seed imprime las credenciales de los usuarios creados. Por defecto:
 
 | Rol | Email | Contraseña |
 |---|---|---|
-| Admin | `admin@gateflow.mx` | `Admin1234!` |
-| Guardia | `guardia1@gateflow.mx` | `Guard1234!` |
-| Guardia | `guardia2@gateflow.mx` | `Guard1234!` |
-| Inquilino | `inquilino1@acerosnorte.mx` | `Tenant1234!` |
-| Inquilino | `inquilino2@techparts.mx` | `Tenant1234!` |
+| Admin | `admin@gateflow.mx` | `Bajio2026!` |
+| Guardia | `guardia1@gateflow.mx` | `Seguridad6!` |
+| Guardia | `guardia2@gateflow.mx` | `Seguridad6!` |
+| Inquilino | `inquilino1@acerosnorte.mx` | `Parque2026!` |
+| Inquilino | `inquilino2@techparts.mx` | `Parque2026!` |
 
 > El seed funciona en cualquier entorno (`dev` con SQLite3 o `prod` con PostgreSQL).
 
