@@ -22,7 +22,7 @@ Table destinations_destination {
 Table users_user {
   id           integer     [pk, increment]
   email        varchar     [unique]
-  username     varchar(150)
+  username     varchar(150) [note: 'blank=True']
   first_name   varchar(150)[note: 'blank=True']
   last_name    varchar(150)[note: 'blank=True']
   role         varchar(20) [note: '"admin" | "guard" | "tenant"']
@@ -35,39 +35,34 @@ Table users_user {
 
 Table passes_accesspass {
   id             integer     [pk, increment]
-  visitor_name   varchar(100)
+  visitor_name   varchar(150)
   plate          varchar(20)
-  pass_type      varchar(20) [note: '"single_use" | "day_pass"']
-  valid_from     date
-  valid_until    date
-  visit_reason   varchar(100)[null, note: 'texto libre — motivo de visita']
-  qr_code        text        [unique, note: 'generado por el servidor']
+  pass_type      varchar(20) [note: '"single" | "day"']
+  valid_from     datetime
+  valid_to       datetime
+  is_active      boolean     [default: true]
   is_used        boolean     [default: false]
   created_at     datetime
+  updated_at     datetime
 
-  // FK al usuario tenant que generó el pase
-  tenant_id      integer     [ref: > users_user.id, note: 'SET_NULL', null]
-
-  // FK al destino específico elegido al generar el pase
-  destination_id integer     [ref: > destinations_destination.id, note: 'SET_NULL', null]
+  created_by_id  integer     [ref: > users_user.id, note: 'CASCADE']
+  destination_id integer     [ref: > destinations_destination.id, note: 'CASCADE']
 }
 
 Table access_accesslog {
-  id           integer     [pk, increment]
-  visitor_name varchar(100)
-  plate        varchar(20)
-  visit_reason varchar(100)[null, note: 'texto libre — motivo de visita']
-  access_type  varchar(10) [note: '"manual" | "qr"']
-  entry_time   datetime
-  exit_time    datetime    [null]
+  id              integer     [pk, increment]
+  visitor_name    varchar(150)
+  plate           varchar(20) [note: 'blank=True']
+  notes           text        [note: 'blank=True']
+  access_type     varchar(10) [note: '"qr" | "manual"']
+  entry_time      datetime
+  exit_time       datetime    [null]
+  status          varchar(10) [note: '"open" | "closed"']
+  created_at      datetime
+  updated_at      datetime
 
-  // FK al pase que originó esta entrada (null si access_type = manual)
-  pass_id        integer   [ref: > passes_accesspass.id, note: 'SET_NULL', null]
-
-  // FK al destino (desnormalizado para consultas rápidas sin pasar por el pase)
-  destination_id integer   [ref: > destinations_destination.id, note: 'SET_NULL', null]
-
-  // Guardia que registró el acceso
-  guard_id       integer   [ref: > users_user.id, note: 'SET_NULL', null]
+  access_pass_id  integer     [ref: > passes_accesspass.id, note: 'SET_NULL', null]
+  destination_id integer     [ref: > destinations_destination.id, note: 'CASCADE']
+  guard_id        integer     [ref: > users_user.id, note: 'SET_NULL', null]
 }
 ```

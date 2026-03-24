@@ -30,7 +30,7 @@ Gestionado exclusivamente desde el Django Admin por superusuario.
 | Acción | admin | guard | tenant |
 |---|---|---|---|
 | Listar | todos los del parque | todos los del parque | solo los suyos |
-| Ver detalle | ✓ | ✓ | solo si es responsable |
+| Ver detalle | ✓ | todos los del parque | solo si es responsable |
 | Crear | ✓ | ✗ | ✗ |
 | Editar | ✓ | ✗ | ✗ |
 | Eliminar | ✓ | ✗ | ✗ |
@@ -38,6 +38,20 @@ Gestionado exclusivamente desde el Django Admin por superusuario.
 > Un tenant que intenta acceder al detalle de un destino que no le pertenece recibe `404` (no se revela la existencia del recurso).
 
 ## Endpoints
+
+### `GET /api/destinations/parks/`
+
+Lista todos los parques industriales del sistema. Cualquier usuario autenticado.
+
+**Response `200`**
+```json
+[
+  { "id": 1, "name": "Parque Norte" },
+  { "id": 2, "name": "Parque Sur" }
+]
+```
+
+---
 
 ### `GET /api/destinations/`
 

@@ -93,9 +93,9 @@ Guard escanea QR → valida AccessPass → crea AccessLog
 | Passes | GET/POST | `/api/passes/` | admin/tenant (W), admin/tenant (R) |
 | Passes | GET/PATCH/DELETE | `/api/passes/{id}/` | admin/tenant |
 | Passes | POST | `/api/passes/validate/` | todos |
-| AccessLogs | GET | `/api/access-logs/` | guard |
+| AccessLogs | GET | `/api/access-logs/` | admin, guard |
 | AccessLogs | POST | `/api/access-logs/create/` | guard |
-| AccessLogs | GET/PATCH | `/api/access-logs/{id}/` | guard |
+| AccessLogs | GET | `/api/access-logs/{id}/` | admin, guard |
 | Metrics | GET | `/api/metrics/dashboard/` | admin |
 | Metrics | GET | `/api/metrics/access-logs/` | admin |
 | Metrics | GET | `/api/metrics/passes/` | admin |

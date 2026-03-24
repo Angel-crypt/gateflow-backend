@@ -214,7 +214,7 @@ Lista todos los parques industriales del sistema.
 
 ## Destinations
 
-El Admin tiene control total. El Tenant solo puede leer sus propios destinos.
+El Admin tiene control total. El Tenant solo puede leer sus propios destinos. El Guard puede ver todos los destinos del parque.
 
 ---
 
@@ -222,10 +222,11 @@ El Admin tiene control total. El Tenant solo puede leer sus propios destinos.
 
 Lista destinos según el rol del usuario.
 
-**Roles:** `admin`, `tenant`
+**Roles:** `admin`, `tenant`, `guard`
 
 - **Admin:** todos los destinos de su parque, ordenados por `id`.
 - **Tenant:** solo los destinos donde es `responsible`.
+- **Guard:** todos los destinos de su parque.
 
 **Respuesta `200`:**
 
@@ -271,9 +272,10 @@ El parque se asigna automáticamente al del admin.
 
 Detalle de un destino.
 
-**Roles:** `admin`, `tenant`
+**Roles:** `admin`, `tenant`, `guard`
 
 - Tenant solo puede acceder a sus propios destinos.
+- Guard puede ver cualquier destino de su parque.
 
 **Respuesta `200`:** objeto destino completo.
 
@@ -466,15 +468,15 @@ Verifica si un pase es vigente dado su ID. Usado por el guardia al escanear el Q
 
 ## Access Logs
 
-Solo el Guard puede registrar y consultar accesos. Todos los datos están limitados al parque del guardia.
+Admin y Guard pueden consultar accesos. Solo Guard puede registrar. Todos los datos están limitados al parque del usuario.
 
 ---
 
 ### `GET /api/access-logs/`
 
-Lista registros de acceso del parque del guardia.
+Lista registros de acceso del parque.
 
-**Roles:** `guard`
+**Roles:** `admin`, `guard`
 
 **Respuesta `200`:** lista ordenada por `entry_time` descendente.
 
@@ -553,7 +555,7 @@ El guardia ingresa todos los datos manualmente.
 
 Detalle de un registro de acceso.
 
-**Roles:** `guard`
+**Roles:** `admin`, `guard`
 
 **Respuesta `200`:** objeto `AccessLog` completo con todos los datos anidados.
 
@@ -703,9 +705,9 @@ Analíticas de pases del parque.
 | GET | `/api/users/` | ✓ | — | — |
 | POST | `/api/users/` | ✓ | — | — |
 | GET | `/api/destinations/parks/` | ✓ | ✓ | ✓ |
-| GET | `/api/destinations/` | ✓ | ✓ | — |
+| GET | `/api/destinations/` | ✓ | ✓ | ✓ |
 | POST | `/api/destinations/` | ✓ | — | — |
-| GET | `/api/destinations/{id}/` | ✓ | ✓ | — |
+| GET | `/api/destinations/{id}/` | ✓ | ✓ | ✓ |
 | PATCH | `/api/destinations/{id}/` | ✓ | — | — |
 | DELETE | `/api/destinations/{id}/` | ✓ | — | — |
 | GET | `/api/passes/` | ✓ | ✓ | — |
@@ -714,9 +716,9 @@ Analíticas de pases del parque.
 | PATCH | `/api/passes/{id}/` | ✓ | ✓ | — |
 | DELETE | `/api/passes/{id}/` | ✓ | ✓ | — |
 | POST | `/api/passes/validate/` | ✓ | ✓ | ✓ |
-| GET | `/api/access-logs/` | — | — | ✓ |
+| GET | `/api/access-logs/` | ✓ | — | ✓ |
 | POST | `/api/access-logs/create/` | — | — | ✓ |
-| GET | `/api/access-logs/{id}/` | — | — | ✓ |
+| GET | `/api/access-logs/{id}/` | ✓ | — | ✓ |
 | GET | `/api/metrics/dashboard/` | ✓ | — | — |
 | GET | `/api/metrics/access-logs/` | ✓ | — | — |
 | GET | `/api/metrics/passes/` | ✓ | — | — |
