@@ -15,7 +15,7 @@
       "item": [
         {
           "name": "Login - Admin",
-          "description": "**POST** `/auth/login/`\n\nInicia sesión como Administrador.\n\n**Body:**\n```json\n{\n  \"email\": \"admin@demo.com\",\n  \"password\": \"admin1234\"\n}\n```\n\n**Respuesta (200):**\n```json\n{\n  \"access\": \"<token>\",\n  \"refresh\": \"<token>\",\n  \"user\": { \"id\": 1, \"email\": \"admin@demo.com\", \"role\": \"admin\", \"park\": { \"id\": 1, \"name\": \"Parque Industrial Norte\" }, ... }\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `admin_token`.",
+          "description": "**POST** `/auth/login/`\n\nInicia sesión como Administrador.\n\n> Credenciales del seed: `admin@gateflow.mx` / `Bajio2026!`\n\n**Body:**\n```json\n{\n  \"email\": \"admin@gateflow.mx\",\n  \"password\": \"Bajio2026!\"\n}\n```\n\n**Respuesta (200):**\n```json\n{\n  \"access\": \"<token>\",\n  \"refresh\": \"<token>\",\n  \"user\": { \"id\": 1, \"email\": \"admin@gateflow.mx\", \"role\": \"admin\", \"park\": { \"id\": 1, \"name\": \"Parque Industrial Bajío\" }, ... }\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `admin_token`.",
           "event": [
             {
               "listen": "test",
@@ -37,13 +37,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@demo.com\",\n  \"password\": \"admin1234\"\n}"
+              "raw": "{\n  \"email\": \"admin@gateflow.mx\",\n  \"password\": \"Bajio2026!\"\n}"
             }
           }
         },
         {
           "name": "Login - Tenant",
-          "description": "**POST** `/auth/login/`\n\nInicia sesión como Inquilino.\n\n**Body:**\n```json\n{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\"\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `tenant_token`.\n\n> El tenant debe haber sido creado previamente por un Admin.",
+          "description": "**POST** `/auth/login/`\n\nInicia sesión como Inquilino.\n\n> Credenciales del seed: `inquilino1@acerosnorte.mx` / `Parque2026!`\n\n**Body:**\n```json\n{\n  \"email\": \"inquilino1@acerosnorte.mx\",\n  \"password\": \"Parque2026!\"\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `tenant_token`.",
           "event": [
             {
               "listen": "test",
@@ -65,13 +65,13 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"inquilino@abc.com\",\n  \"password\": \"temp1234\"\n}"
+              "raw": "{\n  \"email\": \"inquilino1@acerosnorte.mx\",\n  \"password\": \"Parque2026!\"\n}"
             }
           }
         },
         {
           "name": "Login - Guard",
-          "description": "**POST** `/auth/login/`\n\nInicia sesión como Guardia.\n\n**Body:**\n```json\n{\n  \"email\": \"guardia01@parque.com\",\n  \"password\": \"temp1234\"\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `guard_token`.\n\n> El guardia debe haber sido creado previamente por un Admin.",
+          "description": "**POST** `/auth/login/`\n\nInicia sesión como Guardia.\n\n> Credenciales del seed: `guardia1@gateflow.mx` / `Seguridad6!`\n\n**Body:**\n```json\n{\n  \"email\": \"guardia1@gateflow.mx\",\n  \"password\": \"Seguridad6!\"\n}\n```\n\n**Script:** guarda `access_token`, `refresh_token` y `guard_token`.",
           "event": [
             {
               "listen": "test",
@@ -93,7 +93,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"guardia01@parque.com\",\n  \"password\": \"temp1234\"\n}"
+              "raw": "{\n  \"email\": \"guardia1@gateflow.mx\",\n  \"password\": \"Seguridad6!\"\n}"
             }
           }
         },
@@ -146,14 +146,14 @@
         },
         {
           "name": "Change Password",
-          "description": "**POST** `/auth/change-password/`\n\nCambia la contraseña del usuario autenticado.\n\n**Body:**\n```json\n{\n  \"current_password\": \"admin1234\",\n  \"new_password\": \"nueva_segura123\",\n  \"confirm_password\": \"nueva_segura123\"\n}\n```\n\n**Reglas:** mínimo 8 caracteres, `new_password` == `confirm_password`, `current_password` debe ser correcta.\n\n**Respuesta exitosa:** `204 No Content`",
+          "description": "**POST** `/auth/change-password/`\n\nCambia la contraseña del usuario autenticado.\n\n**Body:**\n```json\n{\n  \"current_password\": \"Bajio2026!\",\n  \"new_password\": \"NuevaSegura6!\",\n  \"confirm_password\": \"NuevaSegura6!\"\n}\n```\n\n**Reglas:** mínimo 8 caracteres, `new_password` == `confirm_password`, `current_password` debe ser correcta.\n\n**Respuesta exitosa:** `204 No Content`",
           "request": {
             "method": "POST",
             "url": "{{base_url}}/auth/change-password/",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"current_password\": \"admin1234\",\n  \"new_password\": \"nueva_segura123\",\n  \"confirm_password\": \"nueva_segura123\"\n}"
+              "raw": "{\n  \"current_password\": \"Bajio2026!\",\n  \"new_password\": \"NuevaSegura6!\",\n  \"confirm_password\": \"NuevaSegura6!\"\n}"
             }
           }
         }
