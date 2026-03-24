@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 
 from apps.users.models import User
 from apps.users.permissions import IsAdminOrGuard, IsGuard
+from apps.passes.models import AccessPass
 
 from .models import AccessLog
 from .serializers import AccessLogCreateSerializer, AccessLogSerializer
@@ -22,7 +23,26 @@ class AccessLogListView(generics.ListAPIView):
     serializer_class = AccessLogSerializer
 
     def get_queryset(self):
-        return AccessLog.objects.filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
+        qs = AccessLog.objects.filter(destination__park=self.request.user.park)
+        access_pass = self.request.query_params.get("access_pass")
+        if access_pass:
+            qs = qs.filter(access_pass_id=access_pass)
+
+        search = self.request.query_params.get("search")
+        if search:
+            try:
+                pass_id = int(search)
+                qs_by_pass = qs.filter(access_pass_id=pass_id)
+                if qs_by_pass.exists():
+                    qs = qs_by_pass
+                else:
+                    pass_obj = AccessPass.objects.filter(id=pass_id).first()
+                    if pass_obj:
+                        qs = qs.filter(visitor_name=pass_obj.visitor_name, plate=pass_obj.plate)
+            except ValueError:
+                qs = qs.filter(visitor_name__icontains=search) | qs.filter(plate__icontains=search)
+
+        return qs.order_by("-entry_time")
 
 
 class AccessLogDetailView(generics.RetrieveAPIView):
