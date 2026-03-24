@@ -7,7 +7,7 @@ from apps.users.models import User
 from apps.users.permissions import IsAdminOrGuard, IsGuard
 
 from .models import AccessLog
-from .serializers import AccessLogSerializer
+from .serializers import AccessLogCreateSerializer, AccessLogSerializer
 
 
 class AccessLogListView(generics.ListAPIView):
@@ -60,7 +60,7 @@ class AccessLogCreateView(generics.CreateAPIView):
     """
 
     permission_classes = [IsGuard]
-    serializer_class = AccessLogSerializer
+    serializer_class = AccessLogCreateSerializer
 
     def get_queryset(self):
         assert isinstance(self.request.user, User)
