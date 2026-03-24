@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.passes.apps.PassesConfig",
     "apps.access.apps.AccessConfig",
     "apps.metrics.apps.MetricsConfig",
+    "config",
 ]
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -100,6 +101,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # CORS
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 CORS_ALLOW_CREDENTIALS = True
 
 # Internationalization
