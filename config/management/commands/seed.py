@@ -57,6 +57,8 @@ DESTINATIONS = [
     {"name": "TechParts México", "type": Destination.Type.COMPANY},
     {"name": "Almacén Central", "type": Destination.Type.AREA},
     {"name": "Patio de Maniobras", "type": Destination.Type.AREA},
+    {"name": "Zona de Carga A", "type": Destination.Type.AREA},
+    {"name": "Zona de Carga B", "type": Destination.Type.AREA},
 ]
 
 GUARDS = [
@@ -179,6 +181,25 @@ class Command(BaseCommand):
             )
             self._log("Destino", dest.name, created)
             result.append(dest)
+
+        # Asignar responsables a destinos
+        tenants = list(User.objects.filter(role=User.Role.TENANT, park=park))
+        if tenants and len(tenants) >= 2:
+            # Tenant 1 -> múltiples destinos (Aceros + Almacén + Zona A)
+            result[0].responsible = tenants[0]
+            result[0].save()
+            result[2].responsible = tenants[0]
+            result[2].save()
+            result[4].responsible = tenants[0]
+            result[4].save()
+            # Tenant 2 -> múltiples destinos (TechParts + Patio + Zona B)
+            result[1].responsible = tenants[1]
+            result[1].save()
+            result[3].responsible = tenants[1]
+            result[3].save()
+            result[5].responsible = tenants[1]
+            result[5].save()
+
         return result
 
     # ── Users ─────────────────────────────────────────────────────────────────
