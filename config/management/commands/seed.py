@@ -129,10 +129,10 @@ class Command(BaseCommand):
                     self._seed_users(park, admin_pwd, guard_pwd, tenant_pwd)
 
                 if only is None or only == "passes":
-                    creator = User.objects.filter(park=park, role=User.Role.ADMIN).first()
-                    if not creator:
+                    admin = User.objects.filter(park=park, role=User.Role.ADMIN).first()
+                    if not admin:
                         raise CommandError("No hay admin en el parque. Ejecuta primero sin --only.")
-                    self._seed_passes(destinations, creator)
+                    self._seed_passes(destinations, admin)
 
                 if only is None or only == "logs":
                     passes = AccessPass.objects.filter(destination__park=park)
@@ -276,12 +276,17 @@ class Command(BaseCommand):
 
     # ── Passes ───────────────────────────────────────────────────────────────
 
-    def _seed_passes(self, destinations: list[Destination], creator: User):
+    def _seed_passes(self, destinations: list[Destination], admin: User):
         self.stdout.write("\n  Pases de acceso:")
         dest0, dest1, dest2 = destinations[0], destinations[1], destinations[2]
 
+        # Obtener inquilinos
+        tenants = list(User.objects.filter(role=User.Role.TENANT, park=admin.park))
+        tenant1 = tenants[0] if len(tenants) > 0 else None
+        tenant2 = tenants[1] if len(tenants) > 1 else None
+
         passes_data = [
-            # Pases activos (vigentes ahora)
+            # Pases activos creados por ADMIN
             {
                 "visitor_name": "Juan Pérez",
                 "plate": "ABC-123",
@@ -290,6 +295,7 @@ class Command(BaseCommand):
                 "valid_from": NOW - timedelta(hours=2),
                 "valid_to": NOW + timedelta(hours=22),
                 "is_active": True,
+                "created_by": admin,
             },
             {
                 "visitor_name": "María López",
@@ -299,7 +305,9 @@ class Command(BaseCommand):
                 "valid_from": NOW - timedelta(hours=1),
                 "valid_to": NOW + timedelta(hours=7),
                 "is_active": True,
+                "created_by": admin,
             },
+            # Pases creados por INQUILINOS
             {
                 "visitor_name": "Pedro Ruiz",
                 "plate": "LMN-789",
@@ -308,8 +316,8 @@ class Command(BaseCommand):
                 "valid_from": NOW - timedelta(minutes=30),
                 "valid_to": NOW + timedelta(hours=4),
                 "is_active": True,
+                "created_by": tenant1,
             },
-            # Pase próximo (futuro)
             {
                 "visitor_name": "Sofía Herrera",
                 "plate": "QRS-321",
@@ -318,6 +326,17 @@ class Command(BaseCommand):
                 "valid_from": NOW + timedelta(days=1),
                 "valid_to": NOW + timedelta(days=1, hours=8),
                 "is_active": True,
+                "created_by": tenant1,
+            },
+            {
+                "visitor_name": "Carlos Visitante",
+                "plate": "UVW-111",
+                "destination": dest1,
+                "pass_type": AccessPass.PassType.DAY,
+                "valid_from": NOW - timedelta(hours=3),
+                "valid_to": NOW + timedelta(hours=5),
+                "is_active": True,
+                "created_by": tenant2,
             },
             # Pase expirado
             {
@@ -328,6 +347,7 @@ class Command(BaseCommand):
                 "valid_from": NOW - timedelta(days=3),
                 "valid_to": NOW - timedelta(days=2),
                 "is_active": True,
+                "created_by": admin,
             },
             # Pase desactivado
             {
@@ -338,6 +358,7 @@ class Command(BaseCommand):
                 "valid_from": NOW - timedelta(hours=5),
                 "valid_to": NOW + timedelta(hours=3),
                 "is_active": False,
+                "created_by": tenant1,
             },
         ]
 
@@ -347,7 +368,7 @@ class Command(BaseCommand):
                 plate=p["plate"],
                 destination=p["destination"],
                 defaults={
-                    "created_by": creator,
+                    "created_by": p["created_by"],
                     "pass_type": p["pass_type"],
                     "valid_from": p["valid_from"],
                     "valid_to": p["valid_to"],
