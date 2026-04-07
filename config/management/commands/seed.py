@@ -127,6 +127,7 @@ class Command(BaseCommand):
 
                 if only is None or only == "users":
                     self._seed_users(park, admin_pwd, guard_pwd, tenant_pwd)
+                    self._seed_responsibilities(park)
 
                 if only is None or only == "passes":
                     admin = User.objects.filter(park=park, role=User.Role.ADMIN).first()
@@ -273,6 +274,23 @@ class Command(BaseCommand):
             self._log("Inquilino", user.email, created, indent=4)
             if created:
                 self.stdout.write(self.style.WARNING(f"      → credenciales: {t['email']} / {tenant_pwd}"))
+
+    # ── Responsibilities ──────────────────────────────────────────────────────
+
+    def _seed_responsibilities(self, park: IndustrialPark) -> None:
+        """Asigna a cada tenant como responsable de su destino empresa."""
+        self.stdout.write("\n  Responsables:")
+        assignments = [
+            ("inquilino1@acerosnorte.mx", "Aceros del Norte S.A. de C.V."),
+            ("inquilino2@techparts.mx", "TechParts México"),
+        ]
+        for email, dest_name in assignments:
+            try:
+                tenant = User.objects.get(email=email, park=park)
+            except User.DoesNotExist:
+                continue
+            updated = Destination.objects.filter(name=dest_name, park=park).update(responsible=tenant)
+            self._log("Responsable", f"{email} → {dest_name}", bool(updated), indent=4)
 
     # ── Passes ───────────────────────────────────────────────────────────────
 
