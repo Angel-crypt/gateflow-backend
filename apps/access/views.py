@@ -3,9 +3,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.passes.models import AccessPass
 from apps.users.models import User
 from apps.users.permissions import IsAdminOrGuard, IsGuard
-from apps.passes.models import AccessPass
 
 from .models import AccessLog
 from .serializers import AccessLogCreateSerializer, AccessLogSerializer
