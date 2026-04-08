@@ -174,3 +174,48 @@ def test_create_user_unauthenticated_returns_401():
     payload = {"email": "new@park.com", "password": "pass1234", "role": "guard"}
     response = APIClient().post(URL, payload)
     assert response.status_code == 401
+
+
+# -- /users/<id>/ -------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_user_detail_returns_200_for_same_park_admin(admin, guard):
+    response = auth_client(admin).get(f"{URL}{guard.id}/")
+    assert response.status_code == 200
+    assert response.data["id"] == guard.id
+
+
+@pytest.mark.django_db
+def test_user_detail_forbidden_for_other_park_admin(admin, other_admin):
+    response = auth_client(other_admin).get(f"{URL}{admin.id}/")
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_user_patch_updates_allowed_fields(admin, guard):
+    payload = {"first_name": "Nuevo", "is_active": False, "role": "tenant"}
+    response = auth_client(admin).patch(f"{URL}{guard.id}/", payload, format="json")
+    assert response.status_code == 200
+    assert response.data["first_name"] == "Nuevo"
+    assert response.data["is_active"] is False
+    assert response.data["role"] == "tenant"
+
+
+@pytest.mark.django_db
+def test_user_patch_rejects_admin_role(admin, guard):
+    response = auth_client(admin).patch(f"{URL}{guard.id}/", {"role": "admin"}, format="json")
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_user_delete_returns_204(admin, guard):
+    response = auth_client(admin).delete(f"{URL}{guard.id}/")
+    assert response.status_code == 204
+    assert not User.objects.filter(id=guard.id).exists()
+
+
+@pytest.mark.django_db
+def test_user_detail_guard_forbidden(guard, tenant):
+    response = auth_client(guard).get(f"{URL}{tenant.id}/")
+    assert response.status_code == 403
