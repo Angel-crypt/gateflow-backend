@@ -13,6 +13,7 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     UserCreateSerializer,
     UserSerializer,
+    UserUpdateSerializer,
 )
 
 
@@ -120,3 +121,32 @@ class UserListCreateView(generics.ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Detalle, editar y eliminar usuario del parque. Solo Admin.
+
+    **GET** — Retorna el usuario por id dentro del mismo parque del admin.
+    **PATCH** — Actualiza parcialmente email, nombre, apellido, rol o estado activo.
+    **DELETE** — Elimina el usuario.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+    http_method_names = ["get", "patch", "delete"]
+
+    def get_queryset(self):
+        return User.objects.filter(park=self.request.user.park, is_superuser=False).order_by("id")
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UserUpdateSerializer
+        return UserSerializer
+
+    def update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        instance = self.get_object()
+        serializer = UserUpdateSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)

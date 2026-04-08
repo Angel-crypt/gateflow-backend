@@ -70,6 +70,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return User.objects.create_user(park=park, **validated_data)
 
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["email", "first_name", "last_name", "role", "is_active"]
+
+    def validate_role(self, value: str) -> str:
+        if value not in (User.Role.GUARD, User.Role.TENANT):
+            raise serializers.ValidationError("Solo se permite rol guardia o inquilino.")
+        return value
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs: dict) -> dict[str, Any]:
         data: dict[str, Any] = super().validate(attrs)
