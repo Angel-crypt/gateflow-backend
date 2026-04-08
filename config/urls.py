@@ -13,7 +13,14 @@ from apps.passes.views import (
     AccessPassListCreateView,
     AccessPassValidateView,
 )
-from apps.users.views import ChangePasswordView, CustomTokenObtainPairView, LogoutView, MeView, UserListCreateView
+from apps.users.views import (
+    ChangePasswordView,
+    CustomTokenObtainPairView,
+    LogoutView,
+    MeView,
+    UserDetailView,
+    UserListCreateView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -23,6 +30,7 @@ urlpatterns = [
     path("api/auth/me/", MeView.as_view()),
     path("api/auth/change-password/", ChangePasswordView.as_view()),
     path("api/users/", UserListCreateView.as_view()),
+    path("api/users/<int:pk>/", UserDetailView.as_view()),
     path("api/destinations/", include("apps.destinations.urls")),
     path("api/passes/", AccessPassListCreateView.as_view()),
     path("api/passes/<int:pk>/", AccessPassDetailView.as_view()),
