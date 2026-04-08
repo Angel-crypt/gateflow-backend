@@ -73,10 +73,10 @@ cp "examples-dev/.env.prod.example" .env.prod
 ### `.env` — entorno activo
 
 ```env
-ENV=dev
+DJANGO_ENV=dev
 ```
 
-Cambia a `ENV=prod` cuando quieras usar la configuración de producción.
+Cambia a `DJANGO_ENV=prod` cuando quieras usar la configuración de producción.
 
 ### `.env.dev` — desarrollo (SQLite3, sin Docker)
 
@@ -96,11 +96,12 @@ No necesitas Docker para desarrollo: SQLite3 funciona sin configuración adicion
 SECRET_KEY=<genera-una-clave-segura>
 DEBUG=False
 ALLOWED_HOSTS=your-domain.com
-DATABASE_URL=postgres://app_user:app_password@localhost:5432/app_db
-CORS_ALLOWED_ORIGINS=https://tu-dominio-frontend.com
+DATABASE_URL=postgres://app_user:app_password@db:5432/app_db
+CORS_ALLOWED_ORIGINS=https://tu-dominio.com
+CSRF_TRUSTED_ORIGINS=https://tu-dominio.com
 ```
 
-Ajusta `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` y la URL de la base de datos a tus valores reales.
+Ajusta `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` y la URL de la base de datos a tus valores reales.
 
 > **Nunca subas `.env`, `.env.dev` ni `.env.prod` al repositorio.** Están en `.gitignore`.
 
@@ -108,17 +109,17 @@ Ajusta `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` y la URL de la base
 
 ## 4. (Solo para PostgreSQL) Levantar la base de datos
 
-Si usas `ENV=prod` o quieres probar con PostgreSQL en local:
+Si usas `DJANGO_ENV=prod` o quieres probar con PostgreSQL en local:
 
 ```bash
-# Docker
-docker compose up -d
+# Docker (desde la raíz del workspace)
+docker compose --env-file .env.compose up -d db
 
 # Podman
 podman-compose up -d
 ```
 
-Si usas `ENV=dev` con SQLite3, omite este paso.
+Si usas `DJANGO_ENV=dev` con SQLite3, omite este paso.
 
 ---
 
@@ -189,8 +190,8 @@ Admin: `http://127.0.0.1:8000/admin/`
 Solo edita `.env`:
 
 ```env
-ENV=dev    # SQLite3, DEBUG=True
-ENV=prod   # PostgreSQL, DEBUG=False
+DJANGO_ENV=dev    # SQLite3, DEBUG=True
+DJANGO_ENV=prod   # PostgreSQL, DEBUG=False
 ```
 
 ---
@@ -234,8 +235,29 @@ uv run pytest -v
 | `uv run manage.py seed --flush` | Resetear y recargar seed |
 | `uv run manage.py runserver` | Iniciar servidor |
 | `uv run pytest` | Correr tests |
-| `docker compose up -d` | Levantar PostgreSQL |
+| `docker compose --env-file .env.compose up -d --build` | Levantar stack de producción |
 | `docker compose down` | Detener contenedores |
+
+---
+
+## Despliegue sin contenedores (Render/Railway/Fly)
+
+Configura variables de entorno usando como base `examples-dev/.env.vercel.example`.
+
+Comandos típicos de despliegue:
+
+```bash
+uv sync --frozen
+uv run manage.py migrate
+uv run manage.py collectstatic --noinput
+uv run gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+```
+
+Puntos clave:
+
+- Usa PostgreSQL gestionado y `DATABASE_URL` del proveedor.
+- Mantén `DEBUG=False` en producción.
+- Declara dominios reales en `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` y `CSRF_TRUSTED_ORIGINS`.
 
 ## License
 
