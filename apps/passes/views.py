@@ -1,3 +1,6 @@
+import csv
+
+from django.http import StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -156,3 +159,60 @@ class AccessPassValidateView(APIView):
             )
 
         return Response({"is_valid": True, **AccessPassSerializer(access_pass, context={"request": request}).data})
+
+
+class AccessPassExportCSVView(APIView):
+    """
+    Exportar pases de acceso en formato CSV. Solo Admin y Tenant.
+
+    El Admin exporta todos los pases de su parque. El Tenant exporta
+    únicamente los pases de sus destinos.
+
+    **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdminOrTenant]
+
+    def get(self, request: Request) -> StreamingHttpResponse:
+        user: User = request.user  # type: ignore[assignment]
+
+        if user.role == User.Role.TENANT:
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(
+                destination__responsible=user
+            )
+        else:
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(
+                destination__park=user.park
+            )
+
+        filterset = AccessPassFilter(request.query_params, queryset=qs)
+        qs = filterset.qs
+
+        def rows():
+            yield ["ID", "Visitante", "Placa", "Destino", "Tipo", "Válido desde", "Válido hasta", "Activo", "Creado por", "Fecha creación"]
+            for p in qs.iterator():
+                created_by = f"{p.created_by.first_name} {p.created_by.last_name}".strip() or p.created_by.email
+                yield [
+                    p.id,
+                    p.visitor_name,
+                    p.plate,
+                    p.destination.name,
+                    p.get_pass_type_display(),
+                    p.valid_from.strftime("%d/%m/%Y %H:%M"),
+                    p.valid_to.strftime("%d/%m/%Y %H:%M"),
+                    "Sí" if p.is_active else "No",
+                    created_by,
+                    p.created_at.strftime("%d/%m/%Y %H:%M"),
+                ]
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        writer = csv.writer(Echo())
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in rows()),
+            content_type="text/csv; charset=utf-8",
+        )
+        response["Content-Disposition"] = 'attachment; filename="pases.csv"'
+        return response
