@@ -62,3 +62,8 @@ class AccessLog(models.Model):
         ordering = ["-entry_time"]
         verbose_name = "Access Log"
         verbose_name_plural = "Access Logs"
+        indexes = [
+            models.Index(fields=["entry_time"], name="accesslog_entry_time_idx"),
+            models.Index(fields=["status"], name="accesslog_status_idx"),
+            models.Index(fields=["destination", "entry_time"], name="accesslog_dest_entry_idx"),
+        ]
