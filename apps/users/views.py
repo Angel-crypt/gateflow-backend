@@ -22,9 +22,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     Obtener tokens JWT.
 
     Retorna `access`, `refresh` y el objeto `user` con el perfil completo del usuario autenticado.
+
+    Limitado a 10 intentos por minuto por IP.
     """
 
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_scope = "login"
 
 
 class LogoutView(APIView):

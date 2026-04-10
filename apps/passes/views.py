@@ -97,9 +97,12 @@ class AccessPassValidateView(APIView):
 
     Retorna 400 si el pase está inactivo o fuera del rango de validez.
     Retorna 404 si el pase no existe.
+
+    Limitado a 30 validaciones por minuto por usuario.
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope = "validate_pass"
 
     def post(self, request: Request) -> Response:
         from django.utils import timezone
