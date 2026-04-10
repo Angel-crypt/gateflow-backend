@@ -10,6 +10,7 @@ from apps.access.views import (
 )
 from apps.passes.views import (
     AccessPassDetailView,
+    AccessPassExportCSVView,
     AccessPassListCreateView,
     AccessPassValidateView,
 )
@@ -33,6 +34,7 @@ urlpatterns = [
     path("api/users/<int:pk>/", UserDetailView.as_view()),
     path("api/destinations/", include("apps.destinations.urls")),
     path("api/passes/", AccessPassListCreateView.as_view()),
+    path("api/passes/export/", AccessPassExportCSVView.as_view()),
     path("api/passes/<int:pk>/", AccessPassDetailView.as_view()),
     path("api/passes/validate/", AccessPassValidateView.as_view()),
     path("api/access-logs/", AccessLogListView.as_view()),
