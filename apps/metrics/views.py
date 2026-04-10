@@ -3,15 +3,19 @@ from datetime import timedelta
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from rest_framework import generics
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.access.filters import AccessLogFilter
 from apps.access.models import AccessLog
 from apps.destinations.models import Destination
 from apps.passes.models import AccessPass
 from apps.users.models import User
 from apps.users.permissions import IsAdmin
+
+from .serializers import AccessTableSerializer
 
 
 class DashboardMetricsView(APIView):
@@ -172,3 +176,26 @@ class PassMetricsView(APIView):
                 "by_destination": [{"destination": name, "count": count} for name, count in by_destination],
             }
         )
+
+
+class AccessTableView(generics.ListAPIView):
+    """
+    Tabla combinada de accesos para el dashboard. Solo Admin.
+
+    Retorna registros de AccessLog enriquecidos con datos del pase asociado
+    (si fue QR) en una estructura plana lista para renderizar en tabla.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
+    **Ordenamiento:** `entry_time`, `status`, `access_type`
+    """
+
+    permission_classes = [IsAdmin]
+    serializer_class = AccessTableSerializer
+    filterset_class = AccessLogFilter
+    ordering_fields = ["entry_time", "status", "access_type"]
+    ordering = ["-entry_time"]
+
+    def get_queryset(self):
+        return AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=self.request.user.park)  # type: ignore[union-attr]

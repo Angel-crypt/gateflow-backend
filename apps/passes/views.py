@@ -1,3 +1,6 @@
+import csv
+
+from django.http import FileResponse, StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -5,9 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import User
-from apps.users.permissions import IsAdminOrTenant
+from apps.users.permissions import IsAdmin, IsAdminOrTenant
 
+from .filters import AccessPassFilter
 from .models import AccessPass
+from .pdf import build_passes_pdf
 from .serializers import AccessPassSerializer, AccessPassWriteSerializer
 
 
@@ -25,9 +30,14 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
     generar el código QR.
 
     Campos requeridos: `visitor_name`, `plate`, `valid_from`, `valid_to`.
+
+    **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
     """
 
     permission_classes = [IsAdminOrTenant]
+    filterset_class = AccessPassFilter
+    ordering_fields = ["created_at", "valid_from", "valid_to"]
+    ordering = ["-created_at"]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -37,8 +47,8 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user: User = self.request.user  # type: ignore[assignment]
         if user.role == User.Role.TENANT:
-            return AccessPass.objects.filter(destination__responsible=user)
-        return AccessPass.objects.filter(destination__park=user.park)
+            return AccessPass.objects.select_related("destination", "created_by").filter(destination__responsible=user)
+        return AccessPass.objects.select_related("destination", "created_by").filter(destination__park=user.park)
 
     def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = AccessPassWriteSerializer(data=request.data, context={"request": request})
@@ -70,8 +80,8 @@ class AccessPassDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user: User = self.request.user  # type: ignore[assignment]
         if user.role == User.Role.TENANT:
-            return AccessPass.objects.filter(destination__responsible=user)
-        return AccessPass.objects.filter(destination__park=user.park)
+            return AccessPass.objects.select_related("destination", "created_by").filter(destination__responsible=user)
+        return AccessPass.objects.select_related("destination", "created_by").filter(destination__park=user.park)
 
     def update(self, request: Request, *args, **kwargs) -> Response:
         kwargs["partial"] = True
@@ -91,9 +101,12 @@ class AccessPassValidateView(APIView):
 
     Retorna 400 si el pase está inactivo o fuera del rango de validez.
     Retorna 404 si el pase no existe.
+
+    Limitado a 30 validaciones por minuto por usuario.
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope = "validate_pass"
 
     def post(self, request: Request) -> Response:
         from django.utils import timezone
@@ -147,3 +160,86 @@ class AccessPassValidateView(APIView):
             )
 
         return Response({"is_valid": True, **AccessPassSerializer(access_pass, context={"request": request}).data})
+
+
+class AccessPassExportCSVView(APIView):
+    """
+    Exportar pases de acceso en formato CSV. Solo Admin y Tenant.
+
+    El Admin exporta todos los pases de su parque. El Tenant exporta
+    únicamente los pases de sus destinos.
+
+    **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdminOrTenant]
+
+    def get(self, request: Request) -> StreamingHttpResponse:
+        user: User = request.user  # type: ignore[assignment]
+
+        if user.role == User.Role.TENANT:
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(
+                destination__responsible=user
+            )
+        else:
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(
+                destination__park=user.park
+            )
+
+        filterset = AccessPassFilter(request.query_params, queryset=qs)
+        qs = filterset.qs
+
+        def rows():
+            yield ["ID", "Visitante", "Placa", "Destino", "Tipo", "Válido desde", "Válido hasta", "Activo", "Creado por", "Fecha creación"]
+            for p in qs.iterator():
+                created_by = f"{p.created_by.first_name} {p.created_by.last_name}".strip() or p.created_by.email
+                yield [
+                    p.id,
+                    p.visitor_name,
+                    p.plate,
+                    p.destination.name,
+                    p.get_pass_type_display(),
+                    p.valid_from.strftime("%d/%m/%Y %H:%M"),
+                    p.valid_to.strftime("%d/%m/%Y %H:%M"),
+                    "Sí" if p.is_active else "No",
+                    created_by,
+                    p.created_at.strftime("%d/%m/%Y %H:%M"),
+                ]
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        writer = csv.writer(Echo())
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in rows()),
+            content_type="text/csv; charset=utf-8",
+        )
+        response["Content-Disposition"] = 'attachment; filename="pases.csv"'
+        return response
+
+
+class AccessPassExportPDFView(APIView):
+    """
+    Exportar pases de acceso en formato PDF. Solo Admin.
+
+    Retorna un reporte PDF con todos los pases del parque, incluyendo
+    una tabla de datos y un resumen por tipo y estado.
+
+    **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdmin]
+
+    def get(self, request: Request) -> FileResponse:
+        park = request.user.park  # type: ignore[union-attr]
+
+        qs = AccessPass.objects.select_related("destination", "created_by").filter(
+            destination__park=park
+        )
+
+        filterset = AccessPassFilter(request.query_params, queryset=qs)
+        qs = filterset.qs.order_by("valid_from")
+
+        buffer = build_passes_pdf(qs, park.name)
+        return FileResponse(buffer, as_attachment=True, filename="pases.pdf")

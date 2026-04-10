@@ -1,15 +1,20 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.access.views import (
     AccessLogCreateView,
     AccessLogDetailView,
+    AccessLogExportCSVView,
+    AccessLogExportPDFView,
     AccessLogListView,
     RegisterExitView,
 )
 from apps.passes.views import (
     AccessPassDetailView,
+    AccessPassExportCSVView,
+    AccessPassExportPDFView,
     AccessPassListCreateView,
     AccessPassValidateView,
 )
@@ -22,7 +27,12 @@ from apps.users.views import (
     UserListCreateView,
 )
 
+def health_check(request):
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("api/health/", health_check),
     path("admin/", admin.site.urls),
     path("api/auth/login/", CustomTokenObtainPairView.as_view()),
     path("api/auth/refresh/", TokenRefreshView.as_view()),
@@ -33,9 +43,13 @@ urlpatterns = [
     path("api/users/<int:pk>/", UserDetailView.as_view()),
     path("api/destinations/", include("apps.destinations.urls")),
     path("api/passes/", AccessPassListCreateView.as_view()),
+    path("api/passes/export/", AccessPassExportCSVView.as_view()),
+    path("api/passes/export/pdf/", AccessPassExportPDFView.as_view()),
     path("api/passes/<int:pk>/", AccessPassDetailView.as_view()),
     path("api/passes/validate/", AccessPassValidateView.as_view()),
     path("api/access-logs/", AccessLogListView.as_view()),
+    path("api/access-logs/export/", AccessLogExportCSVView.as_view()),
+    path("api/access-logs/export/pdf/", AccessLogExportPDFView.as_view()),
     path("api/access-logs/create/", AccessLogCreateView.as_view()),
     path("api/access-logs/<int:pk>/", AccessLogDetailView.as_view()),
     path("api/access-logs/<int:pk>/register-exit/", RegisterExitView.as_view()),

@@ -1,3 +1,6 @@
+import csv
+
+from django.http import FileResponse, StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -5,9 +8,11 @@ from rest_framework.views import APIView
 
 from apps.passes.models import AccessPass
 from apps.users.models import User
-from apps.users.permissions import IsAdminOrGuard, IsGuard
+from apps.users.permissions import IsAdmin, IsAdminOrGuard, IsGuard
 
+from .filters import AccessLogFilter
 from .models import AccessLog
+from .pdf import build_access_logs_pdf
 from .serializers import AccessLogCreateSerializer, AccessLogSerializer
 
 
@@ -17,13 +22,20 @@ class AccessLogListView(generics.ListAPIView):
 
     Retorna todos los registros de entrada/salida correspondientes
     al parque industrial del usuario autenticado, ordenados por `entry_time` descendente.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
     """
 
     permission_classes = [IsAdminOrGuard]
     serializer_class = AccessLogSerializer
+    filterset_class = AccessLogFilter
+    ordering_fields = ["entry_time", "status", "access_type"]
+    ordering = ["-entry_time"]
 
     def get_queryset(self):
-        qs = AccessLog.objects.filter(destination__park=self.request.user.park)
+        qs = AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=self.request.user.park)
         access_pass = self.request.query_params.get("access_pass")
         if access_pass:
             qs = qs.filter(access_pass_id=access_pass)
@@ -58,7 +70,9 @@ class AccessLogDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = "pk"
 
     def get_queryset(self):
-        return AccessLog.objects.filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
+        return AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
 
 
 class AccessLogCreateView(generics.CreateAPIView):
@@ -112,3 +126,79 @@ class RegisterExitView(APIView):
 
         log.register_exit()
         return Response(AccessLogSerializer(log, context={"request": request}).data)
+
+
+class AccessLogExportCSVView(APIView):
+    """
+    Exportar registros de acceso en formato CSV. Solo Admin y Guard.
+
+    Retorna todos los registros del parque del usuario autenticado.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdminOrGuard]
+
+    def get(self, request: Request) -> StreamingHttpResponse:
+        qs = AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=request.user.park)  # type: ignore[union-attr]
+
+        filterset = AccessLogFilter(request.query_params, queryset=qs)
+        qs = filterset.qs
+
+        def rows():
+            yield ["ID", "Visitante", "Placa", "Destino", "Tipo", "Guardia", "Entrada", "Salida", "Estado"]
+            for log in qs.iterator():
+                guard_name = ""
+                if log.guard:
+                    guard_name = f"{log.guard.first_name} {log.guard.last_name}".strip() or log.guard.email
+                yield [
+                    log.id,
+                    log.visitor_name,
+                    log.plate,
+                    log.destination.name,
+                    log.get_access_type_display(),
+                    guard_name,
+                    log.entry_time.strftime("%d/%m/%Y %H:%M"),
+                    log.exit_time.strftime("%d/%m/%Y %H:%M") if log.exit_time else "",
+                    log.get_status_display(),
+                ]
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        writer = csv.writer(Echo())
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in rows()),
+            content_type="text/csv; charset=utf-8",
+        )
+        response["Content-Disposition"] = 'attachment; filename="accesos.csv"'
+        return response
+
+
+class AccessLogExportPDFView(APIView):
+    """
+    Exportar registros de acceso en formato PDF. Solo Admin.
+
+    Retorna un reporte PDF con todos los registros del parque, incluyendo
+    una tabla de datos y un resumen por tipo y estado.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdmin]
+
+    def get(self, request: Request) -> FileResponse:
+        park = request.user.park  # type: ignore[union-attr]
+
+        qs = AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=park)
+
+        filterset = AccessLogFilter(request.query_params, queryset=qs)
+        qs = filterset.qs.order_by("entry_time")
+
+        buffer = build_access_logs_pdf(qs, park.name)
+        return FileResponse(buffer, as_attachment=True, filename="accesos.pdf")
