@@ -1,3 +1,6 @@
+import csv
+
+from django.http import StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -122,3 +125,53 @@ class RegisterExitView(APIView):
 
         log.register_exit()
         return Response(AccessLogSerializer(log, context={"request": request}).data)
+
+
+class AccessLogExportCSVView(APIView):
+    """
+    Exportar registros de acceso en formato CSV. Solo Admin y Guard.
+
+    Retorna todos los registros del parque del usuario autenticado.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdminOrGuard]
+
+    def get(self, request: Request) -> StreamingHttpResponse:
+        qs = AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=request.user.park)  # type: ignore[union-attr]
+
+        filterset = AccessLogFilter(request.query_params, queryset=qs)
+        qs = filterset.qs
+
+        def rows():
+            yield ["ID", "Visitante", "Placa", "Destino", "Tipo", "Guardia", "Entrada", "Salida", "Estado"]
+            for log in qs.iterator():
+                guard_name = ""
+                if log.guard:
+                    guard_name = f"{log.guard.first_name} {log.guard.last_name}".strip() or log.guard.email
+                yield [
+                    log.id,
+                    log.visitor_name,
+                    log.plate,
+                    log.destination.name,
+                    log.get_access_type_display(),
+                    guard_name,
+                    log.entry_time.strftime("%d/%m/%Y %H:%M"),
+                    log.exit_time.strftime("%d/%m/%Y %H:%M") if log.exit_time else "",
+                    log.get_status_display(),
+                ]
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        writer = csv.writer(Echo())
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in rows()),
+            content_type="text/csv; charset=utf-8",
+        )
+        response["Content-Disposition"] = 'attachment; filename="accesos.csv"'
+        return response
