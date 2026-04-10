@@ -37,8 +37,8 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user: User = self.request.user  # type: ignore[assignment]
         if user.role == User.Role.TENANT:
-            return AccessPass.objects.filter(destination__responsible=user)
-        return AccessPass.objects.filter(destination__park=user.park)
+            return AccessPass.objects.select_related("destination", "created_by").filter(destination__responsible=user)
+        return AccessPass.objects.select_related("destination", "created_by").filter(destination__park=user.park)
 
     def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = AccessPassWriteSerializer(data=request.data, context={"request": request})
@@ -70,8 +70,8 @@ class AccessPassDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user: User = self.request.user  # type: ignore[assignment]
         if user.role == User.Role.TENANT:
-            return AccessPass.objects.filter(destination__responsible=user)
-        return AccessPass.objects.filter(destination__park=user.park)
+            return AccessPass.objects.select_related("destination", "created_by").filter(destination__responsible=user)
+        return AccessPass.objects.select_related("destination", "created_by").filter(destination__park=user.park)
 
     def update(self, request: Request, *args, **kwargs) -> Response:
         kwargs["partial"] = True
