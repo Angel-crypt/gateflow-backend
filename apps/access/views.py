@@ -7,6 +7,7 @@ from apps.passes.models import AccessPass
 from apps.users.models import User
 from apps.users.permissions import IsAdminOrGuard, IsGuard
 
+from .filters import AccessLogFilter
 from .models import AccessLog
 from .serializers import AccessLogCreateSerializer, AccessLogSerializer
 
@@ -17,10 +18,15 @@ class AccessLogListView(generics.ListAPIView):
 
     Retorna todos los registros de entrada/salida correspondientes
     al parque industrial del usuario autenticado, ordenados por `entry_time` descendente.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
     """
 
     permission_classes = [IsAdminOrGuard]
     serializer_class = AccessLogSerializer
+    filterset_class = AccessLogFilter
+    ordering_fields = ["entry_time", "status", "access_type"]
+    ordering = ["-entry_time"]
 
     def get_queryset(self):
         qs = AccessLog.objects.select_related(

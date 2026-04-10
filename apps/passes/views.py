@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from apps.users.models import User
 from apps.users.permissions import IsAdminOrTenant
 
+from .filters import AccessPassFilter
 from .models import AccessPass
 from .serializers import AccessPassSerializer, AccessPassWriteSerializer
 
@@ -25,9 +26,14 @@ class AccessPassListCreateView(generics.ListCreateAPIView):
     generar el código QR.
 
     Campos requeridos: `visitor_name`, `plate`, `valid_from`, `valid_to`.
+
+    **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
     """
 
     permission_classes = [IsAdminOrTenant]
+    filterset_class = AccessPassFilter
+    ordering_fields = ["created_at", "valid_from", "valid_to"]
+    ordering = ["-created_at"]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
