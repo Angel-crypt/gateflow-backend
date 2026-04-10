@@ -6,12 +6,14 @@ from apps.access.views import (
     AccessLogCreateView,
     AccessLogDetailView,
     AccessLogExportCSVView,
+    AccessLogExportPDFView,
     AccessLogListView,
     RegisterExitView,
 )
 from apps.passes.views import (
     AccessPassDetailView,
     AccessPassExportCSVView,
+    AccessPassExportPDFView,
     AccessPassListCreateView,
     AccessPassValidateView,
 )
@@ -36,10 +38,12 @@ urlpatterns = [
     path("api/destinations/", include("apps.destinations.urls")),
     path("api/passes/", AccessPassListCreateView.as_view()),
     path("api/passes/export/", AccessPassExportCSVView.as_view()),
+    path("api/passes/export/pdf/", AccessPassExportPDFView.as_view()),
     path("api/passes/<int:pk>/", AccessPassDetailView.as_view()),
     path("api/passes/validate/", AccessPassValidateView.as_view()),
     path("api/access-logs/", AccessLogListView.as_view()),
     path("api/access-logs/export/", AccessLogExportCSVView.as_view()),
+    path("api/access-logs/export/pdf/", AccessLogExportPDFView.as_view()),
     path("api/access-logs/create/", AccessLogCreateView.as_view()),
     path("api/access-logs/<int:pk>/", AccessLogDetailView.as_view()),
     path("api/access-logs/<int:pk>/register-exit/", RegisterExitView.as_view()),

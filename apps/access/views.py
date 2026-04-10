@@ -1,6 +1,6 @@
 import csv
 
-from django.http import StreamingHttpResponse
+from django.http import FileResponse, StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -8,10 +8,11 @@ from rest_framework.views import APIView
 
 from apps.passes.models import AccessPass
 from apps.users.models import User
-from apps.users.permissions import IsAdminOrGuard, IsGuard
+from apps.users.permissions import IsAdmin, IsAdminOrGuard, IsGuard
 
 from .filters import AccessLogFilter
 from .models import AccessLog
+from .pdf import build_access_logs_pdf
 from .serializers import AccessLogCreateSerializer, AccessLogSerializer
 
 
@@ -175,3 +176,29 @@ class AccessLogExportCSVView(APIView):
         )
         response["Content-Disposition"] = 'attachment; filename="accesos.csv"'
         return response
+
+
+class AccessLogExportPDFView(APIView):
+    """
+    Exportar registros de acceso en formato PDF. Solo Admin.
+
+    Retorna un reporte PDF con todos los registros del parque, incluyendo
+    una tabla de datos y un resumen por tipo y estado.
+
+    **Filtros disponibles:** `access_type`, `status`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdmin]
+
+    def get(self, request: Request) -> FileResponse:
+        park = request.user.park  # type: ignore[union-attr]
+
+        qs = AccessLog.objects.select_related(
+            "access_pass", "destination", "guard"
+        ).filter(destination__park=park)
+
+        filterset = AccessLogFilter(request.query_params, queryset=qs)
+        qs = filterset.qs.order_by("entry_time")
+
+        buffer = build_access_logs_pdf(qs, park.name)
+        return FileResponse(buffer, as_attachment=True, filename="accesos.pdf")

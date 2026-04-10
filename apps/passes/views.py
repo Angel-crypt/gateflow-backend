@@ -1,6 +1,6 @@
 import csv
 
-from django.http import StreamingHttpResponse
+from django.http import FileResponse, StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -8,10 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import User
-from apps.users.permissions import IsAdminOrTenant
+from apps.users.permissions import IsAdmin, IsAdminOrTenant
 
 from .filters import AccessPassFilter
 from .models import AccessPass
+from .pdf import build_passes_pdf
 from .serializers import AccessPassSerializer, AccessPassWriteSerializer
 
 
@@ -216,3 +217,29 @@ class AccessPassExportCSVView(APIView):
         )
         response["Content-Disposition"] = 'attachment; filename="pases.csv"'
         return response
+
+
+class AccessPassExportPDFView(APIView):
+    """
+    Exportar pases de acceso en formato PDF. Solo Admin.
+
+    Retorna un reporte PDF con todos los pases del parque, incluyendo
+    una tabla de datos y un resumen por tipo y estado.
+
+    **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
+    """
+
+    permission_classes = [IsAdmin]
+
+    def get(self, request: Request) -> FileResponse:
+        park = request.user.park  # type: ignore[union-attr]
+
+        qs = AccessPass.objects.select_related("destination", "created_by").filter(
+            destination__park=park
+        )
+
+        filterset = AccessPassFilter(request.query_params, queryset=qs)
+        qs = filterset.qs.order_by("valid_from")
+
+        buffer = build_passes_pdf(qs, park.name)
+        return FileResponse(buffer, as_attachment=True, filename="pases.pdf")
