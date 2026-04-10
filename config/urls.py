@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from apps.access.views import (
     AccessLogCreateView,
     AccessLogDetailView,
+    AccessLogExportCSVView,
     AccessLogListView,
     RegisterExitView,
 )
@@ -38,6 +39,7 @@ urlpatterns = [
     path("api/passes/<int:pk>/", AccessPassDetailView.as_view()),
     path("api/passes/validate/", AccessPassValidateView.as_view()),
     path("api/access-logs/", AccessLogListView.as_view()),
+    path("api/access-logs/export/", AccessLogExportCSVView.as_view()),
     path("api/access-logs/create/", AccessLogCreateView.as_view()),
     path("api/access-logs/<int:pk>/", AccessLogDetailView.as_view()),
     path("api/access-logs/<int:pk>/register-exit/", RegisterExitView.as_view()),
