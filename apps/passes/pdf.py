@@ -28,7 +28,7 @@ WHITE = colors.white
 CONTENT_WIDTH = 26.7 * cm
 
 
-def build_passes_pdf(queryset: QuerySet[AccessPass], park_name: str) -> BytesIO:
+def build_passes_pdf(queryset: QuerySet[AccessPass], title: str) -> BytesIO:
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -62,7 +62,7 @@ def build_passes_pdf(queryset: QuerySet[AccessPass], park_name: str) -> BytesIO:
 
     # --- Header banner ---
     header_data = [[
-        Paragraph(f"{park_name}<br/><font size='9'>Reporte de Pases</font>", title_style),
+        Paragraph(f"{title}<br/><font size='9'>Reporte de Pases</font>", title_style),
         Paragraph(
             f"Generado el<br/><b><font color='#FFFFFF'>{timezone.now().strftime('%d/%m/%Y  %H:%M')}</font></b>",
             date_style,
