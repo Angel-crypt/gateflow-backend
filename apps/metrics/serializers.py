@@ -35,8 +35,8 @@ class AccessTableSerializer(serializers.ModelSerializer):
         full_name = f"{obj.guard.first_name} {obj.guard.last_name}".strip()
         return full_name or obj.guard.email
 
-    def get_pass_id(self, obj: AccessLog) -> int | None:
-        return obj.access_pass_id if obj.access_pass_id else None
+    def get_pass_id(self, obj: AccessLog) -> int | str:
+        return obj.access_pass_id if obj.access_pass_id else "N/A"
 
     def get_pass_type(self, obj: AccessLog) -> str:
         if obj.access_pass:
