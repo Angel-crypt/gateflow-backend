@@ -196,7 +196,7 @@ class AccessPassExportCSVView(APIView):
                 yield [
                     p.id,
                     p.visitor_name,
-                    p.plate,
+                    p.plate or "N/A",
                     p.destination.name,
                     p.get_pass_type_display(),
                     p.valid_from.strftime("%d/%m/%Y %H:%M"),
