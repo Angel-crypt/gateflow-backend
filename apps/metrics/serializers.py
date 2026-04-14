@@ -5,6 +5,7 @@ from apps.access.models import AccessLog
 
 class AccessTableSerializer(serializers.ModelSerializer):
     destination = serializers.CharField(source="destination.name")
+    plate = serializers.SerializerMethodField()
     guard = serializers.SerializerMethodField()
     pass_id = serializers.SerializerMethodField()
     pass_type = serializers.SerializerMethodField()
@@ -25,16 +26,19 @@ class AccessTableSerializer(serializers.ModelSerializer):
             "status",
         ]
 
+    def get_plate(self, obj: AccessLog) -> str:
+        return obj.plate or "N/A"
+
     def get_guard(self, obj: AccessLog) -> str:
         if not obj.guard:
-            return ""
+            return "N/A"
         full_name = f"{obj.guard.first_name} {obj.guard.last_name}".strip()
         return full_name or obj.guard.email
 
     def get_pass_id(self, obj: AccessLog) -> int | None:
         return obj.access_pass_id if obj.access_pass_id else None
 
-    def get_pass_type(self, obj: AccessLog) -> str | None:
+    def get_pass_type(self, obj: AccessLog) -> str:
         if obj.access_pass:
             return obj.access_pass.get_pass_type_display()
-        return None
+        return "N/A"

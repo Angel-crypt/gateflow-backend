@@ -156,12 +156,12 @@ class AccessLogExportCSVView(APIView):
                 yield [
                     log.id,
                     log.visitor_name,
-                    log.plate,
+                    log.plate or "N/A",
                     log.destination.name,
                     log.get_access_type_display(),
-                    guard_name,
+                    guard_name or "N/A",
                     log.entry_time.strftime("%d/%m/%Y %H:%M"),
-                    log.exit_time.strftime("%d/%m/%Y %H:%M") if log.exit_time else "",
+                    log.exit_time.strftime("%d/%m/%Y %H:%M") if log.exit_time else "N/A",
                     log.get_status_display(),
                 ]
 

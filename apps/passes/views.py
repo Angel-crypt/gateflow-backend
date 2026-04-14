@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import User
-from apps.users.permissions import IsAdmin, IsAdminOrTenant
+from apps.users.permissions import IsAdminOrTenant
 
 from .filters import AccessPassFilter
 from .models import AccessPass
@@ -196,7 +196,7 @@ class AccessPassExportCSVView(APIView):
                 yield [
                     p.id,
                     p.visitor_name,
-                    p.plate,
+                    p.plate or "N/A",
                     p.destination.name,
                     p.get_pass_type_display(),
                     p.valid_from.strftime("%d/%m/%Y %H:%M"),
@@ -221,25 +221,34 @@ class AccessPassExportCSVView(APIView):
 
 class AccessPassExportPDFView(APIView):
     """
-    Exportar pases de acceso en formato PDF. Solo Admin.
+    Exportar pases de acceso en formato PDF. Admin y Tenant.
 
-    Retorna un reporte PDF con todos los pases del parque, incluyendo
-    una tabla de datos y un resumen por tipo y estado.
+    El Admin recibe todos los pases del parque. El Tenant recibe únicamente
+    los pases correspondientes a los destinos de los que es responsable.
 
     **Filtros disponibles:** `pass_type`, `is_active`, `destination`, `date_from`, `date_to`
     """
 
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOrTenant]
 
     def get(self, request: Request) -> FileResponse:
-        park = request.user.park  # type: ignore[union-attr]
+        user: User = request.user  # type: ignore[assignment]
 
-        qs = AccessPass.objects.select_related("destination", "created_by").filter(
-            destination__park=park
-        )
+        if user.role == User.Role.TENANT:
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(
+                destination__responsible=user
+            )
+            tenant_name = f"{user.first_name} {user.last_name}".strip() or user.email
+            title = f"{tenant_name} — Mis Pases"
+        else:
+            park = user.park  # type: ignore[union-attr]
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(
+                destination__park=park
+            )
+            title = park.name
 
         filterset = AccessPassFilter(request.query_params, queryset=qs)
         qs = filterset.qs.order_by("valid_from")
 
-        buffer = build_passes_pdf(qs, park.name)
+        buffer = build_passes_pdf(qs, title)
         return FileResponse(buffer, as_attachment=True, filename="pases.pdf")
