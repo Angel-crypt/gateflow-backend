@@ -192,7 +192,7 @@ class AccessTableView(generics.ListAPIView):
     permission_classes = [IsAdmin]
     serializer_class = AccessTableSerializer
     filterset_class = AccessLogFilter
-    ordering_fields = ["entry_time", "status", "access_type"]
+    ordering_fields = ["id", "visitor_name", "entry_time", "exit_time", "status", "access_type"]
     ordering = ["-entry_time"]
 
     def get_queryset(self):
