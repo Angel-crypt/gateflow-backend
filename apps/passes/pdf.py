@@ -62,13 +62,13 @@ def build_passes_pdf(queryset: QuerySet[AccessPass], park_name: str) -> BytesIO:
         rows.append([
             str(pass_obj.id),
             pass_obj.visitor_name,
-            pass_obj.plate or "—",
+            pass_obj.plate or "N/A",
             pass_obj.destination.name,
             pass_obj.get_pass_type_display(),
             pass_obj.valid_from.strftime("%d/%m/%Y %H:%M"),
             pass_obj.valid_to.strftime("%d/%m/%Y %H:%M"),
             status_label,
-            created_by_name or "—",
+            created_by_name or "N/A",
         ])
 
         if pass_obj.pass_type == AccessPass.PassType.SINGLE:
