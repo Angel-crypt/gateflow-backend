@@ -33,9 +33,9 @@ class AccessLogListView(generics.ListAPIView):
     ordering = ["-entry_time"]
 
     def get_queryset(self):
-        qs = AccessLog.objects.select_related(
-            "access_pass", "destination", "guard"
-        ).filter(destination__park=self.request.user.park)
+        qs = AccessLog.objects.select_related("access_pass", "destination", "guard").filter(
+            destination__park=self.request.user.park
+        )
         access_pass = self.request.query_params.get("access_pass")
         if access_pass:
             qs = qs.filter(access_pass_id=access_pass)
@@ -70,9 +70,9 @@ class AccessLogDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = "pk"
 
     def get_queryset(self):
-        return AccessLog.objects.select_related(
-            "access_pass", "destination", "guard"
-        ).filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
+        return AccessLog.objects.select_related("access_pass", "destination", "guard").filter(
+            destination__park=self.request.user.park
+        )  # type: ignore[union-attr]
 
 
 class AccessLogCreateView(generics.CreateAPIView):
@@ -140,9 +140,9 @@ class AccessLogExportCSVView(APIView):
     permission_classes = [IsAdminOrGuard]
 
     def get(self, request: Request) -> StreamingHttpResponse:
-        qs = AccessLog.objects.select_related(
-            "access_pass", "destination", "guard"
-        ).filter(destination__park=request.user.park)  # type: ignore[union-attr]
+        qs = AccessLog.objects.select_related("access_pass", "destination", "guard").filter(
+            destination__park=request.user.park
+        )  # type: ignore[union-attr]
 
         filterset = AccessLogFilter(request.query_params, queryset=qs)
         qs = filterset.qs
@@ -193,9 +193,7 @@ class AccessLogExportPDFView(APIView):
     def get(self, request: Request) -> FileResponse:
         park = request.user.park  # type: ignore[union-attr]
 
-        qs = AccessLog.objects.select_related(
-            "access_pass", "destination", "guard"
-        ).filter(destination__park=park)
+        qs = AccessLog.objects.select_related("access_pass", "destination", "guard").filter(destination__park=park)
 
         filterset = AccessLogFilter(request.query_params, queryset=qs)
         qs = filterset.qs.order_by("entry_time")

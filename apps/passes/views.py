@@ -178,19 +178,26 @@ class AccessPassExportCSVView(APIView):
         user: User = request.user  # type: ignore[assignment]
 
         if user.role == User.Role.TENANT:
-            qs = AccessPass.objects.select_related("destination", "created_by").filter(
-                destination__responsible=user
-            )
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(destination__responsible=user)
         else:
-            qs = AccessPass.objects.select_related("destination", "created_by").filter(
-                destination__park=user.park
-            )
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(destination__park=user.park)
 
         filterset = AccessPassFilter(request.query_params, queryset=qs)
         qs = filterset.qs
 
         def rows():
-            yield ["ID", "Visitante", "Placa", "Destino", "Tipo", "Válido desde", "Válido hasta", "Activo", "Creado por", "Fecha creación"]
+            yield [
+                "ID",
+                "Visitante",
+                "Placa",
+                "Destino",
+                "Tipo",
+                "Válido desde",
+                "Válido hasta",
+                "Activo",
+                "Creado por",
+                "Fecha creación",
+            ]
             for p in qs.iterator():
                 created_by = f"{p.created_by.first_name} {p.created_by.last_name}".strip() or p.created_by.email
                 yield [
@@ -235,16 +242,12 @@ class AccessPassExportPDFView(APIView):
         user: User = request.user  # type: ignore[assignment]
 
         if user.role == User.Role.TENANT:
-            qs = AccessPass.objects.select_related("destination", "created_by").filter(
-                destination__responsible=user
-            )
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(destination__responsible=user)
             tenant_name = f"{user.first_name} {user.last_name}".strip() or user.email
             title = f"{tenant_name} — Mis Pases"
         else:
             park = user.park  # type: ignore[union-attr]
-            qs = AccessPass.objects.select_related("destination", "created_by").filter(
-                destination__park=park
-            )
+            qs = AccessPass.objects.select_related("destination", "created_by").filter(destination__park=park)
             title = park.name
 
         filterset = AccessPassFilter(request.query_params, queryset=qs)

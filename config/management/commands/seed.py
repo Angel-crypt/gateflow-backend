@@ -278,11 +278,15 @@ class Command(BaseCommand):
     # ── Responsibilities ──────────────────────────────────────────────────────
 
     def _seed_responsibilities(self, park: IndustrialPark) -> None:
-        """Asigna a cada tenant como responsable de su destino empresa."""
+        """Asigna a cada tenant como responsable de sus destinos."""
         self.stdout.write("\n  Responsables:")
         assignments = [
             ("inquilino1@acerosnorte.mx", "Aceros del Norte S.A. de C.V."),
+            ("inquilino1@acerosnorte.mx", "Almacén Central"),
+            ("inquilino1@acerosnorte.mx", "Zona de Carga A"),
             ("inquilino2@techparts.mx", "TechParts México"),
+            ("inquilino2@techparts.mx", "Patio de Maniobras"),
+            ("inquilino2@techparts.mx", "Zona de Carga B"),
         ]
         for email, dest_name in assignments:
             try:
@@ -495,6 +499,15 @@ class Command(BaseCommand):
         ]
 
         for log in logs_data:
+            # Para accesos QR, buscar el pase correspondiente por visitante y placa
+            access_pass = None
+            if log["access_type"] == AccessLog.AccessType.QR:
+                access_pass = AccessPass.objects.filter(
+                    visitor_name=log["visitor_name"],
+                    plate=log["plate"],
+                    destination=log["destination"],  # type: ignore[misc]
+                ).first()
+
             # Buscar por visitor_name y plate para evitar duplicados
             existing = AccessLog.objects.filter(
                 visitor_name=log["visitor_name"],
@@ -508,6 +521,7 @@ class Command(BaseCommand):
                 existing.access_type = log["access_type"]
                 existing.entry_time = log["entry_time"]
                 existing.status = log["status"]
+                existing.access_pass = access_pass
                 if log.get("exit_time"):
                     existing.exit_time = log["exit_time"]
                 else:
@@ -528,6 +542,7 @@ class Command(BaseCommand):
                     exit_time=log.get("exit_time"),
                     status=log["status"],
                     notes="",
+                    access_pass=access_pass,
                 )
                 created = True
 

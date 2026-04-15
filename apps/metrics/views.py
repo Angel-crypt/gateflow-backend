@@ -196,6 +196,6 @@ class AccessTableView(generics.ListAPIView):
     ordering = ["-entry_time"]
 
     def get_queryset(self):
-        return AccessLog.objects.select_related(
-            "access_pass", "destination", "guard"
-        ).filter(destination__park=self.request.user.park)  # type: ignore[union-attr]
+        return AccessLog.objects.select_related("access_pass", "destination", "guard").filter(
+            destination__park=self.request.user.park
+        )  # type: ignore[union-attr]

@@ -58,8 +58,7 @@ class AccessPassWriteSerializer(serializers.ModelSerializer):
             qs = Destination.objects.filter(park=user.park, is_active=True)
             if user.role == User.Role.TENANT:
                 qs = qs.filter(responsible=user)
-            elif user.role == "admin":
-                qs = qs.filter(type=Destination.Type.AREA)
+            # Admin can create passes for any active destination in the park
             self.fields["destination"].queryset = qs  # type: ignore[union-attr, attr-defined]
 
     def validate(self, attrs: dict) -> dict:

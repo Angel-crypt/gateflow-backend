@@ -27,6 +27,7 @@ from apps.users.views import (
     UserListCreateView,
 )
 
+
 def health_check(request):
     return JsonResponse({"status": "ok"})
 
