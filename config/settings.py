@@ -6,9 +6,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
 
-env.read_env(BASE_DIR / ".env")
-ENV = env("DJANGO_ENV")
-env.read_env(BASE_DIR / f".env.{ENV}", overwrite=True)
+_base_env = BASE_DIR / ".env"
+if _base_env.exists():
+    env.read_env(_base_env)
+
+ENV = env("DJANGO_ENV", default="prod")
+
+_env_file = BASE_DIR / f".env.{ENV}"
+if _env_file.exists():
+    env.read_env(_env_file, overwrite=True)
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
